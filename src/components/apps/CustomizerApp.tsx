@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Cpu, Package, HardDrive, Play, Shield, Terminal, Loader2, Save, Box, Layers, Smartphone, Radio } from 'lucide-react';
+import { Settings, Cpu, Package, HardDrive, Play, Shield, Terminal, Loader2, Save, Box, Layers, Smartphone, Radio, Trophy, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const CustomizerApp: React.FC = () => {

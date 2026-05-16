@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, X, Image as ImageIcon, Gamepad2, Settings, Cloud, Loader2, Search, Sparkles, Database, FileArchive, AlertTriangle } from 'lucide-react';
+import { Download, X, Image as ImageIcon, Gamepad2, Settings, Cloud, Loader2, Search, Sparkles, Database, FileArchive, AlertTriangle, Package } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { processKernelIntent } from '../core/ai';
 

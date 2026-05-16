@@ -17,24 +17,27 @@ The system is meticulously crafted using **Clean Architecture** and **SOLID prin
 
 ```mermaid
 graph TD
-    subgraph UI[Client-Side (React / Vite)]
+    subgraph UI ["Client-Side (React / Vite)"]
         A[FliperOS UI Desktop] --> B(Apps: Kernel Shell, SysMonitor...)
         B --> C{Contexts & State}
     end
 
-    subgraph API[API Gateway & Edge Router - Express]
+    subgraph API ["API Gateway & Edge Router - Express"]
         D[Router Routes] --> E[SecurityProvider / RBAC / JWT]
         E --> F[KernelProxy]
         E --> G[HealthMonitor]
         E --> H[AI Orchestrator]
     end
 
-    subgraph Core[Kernel Space & Services]
+    subgraph Core ["Kernel Space & Frank-Layers"]
         F --> I([Sandboxed Shell Execution])
         H --> J([Gemini / Fallback Local Llama])
         G --> K([Observability & Self-Healing])
         L[QueueManager] --> M([Multi-thread Task Processing])
-        N[TelemetryLogger] --> O[(Logs & Webhooks)]
+        I --> P{Frank-Layers}
+        P --> P1[Proton/Wine]
+        P --> P2[Waydroid]
+        P --> P3[Box64/Hybrid]
     end
 
     A <--> D

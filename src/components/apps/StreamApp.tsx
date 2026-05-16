@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Square, Settings, Radio, Video, Mic, MonitorUp } from 'lucide-react';
 
 export const StreamApp: React.FC = () => {
