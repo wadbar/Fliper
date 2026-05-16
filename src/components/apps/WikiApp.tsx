@@ -330,6 +330,26 @@ export const WikiApp: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
+
+                            <div className="mt-8 p-6 bg-zinc-900/50 border border-zinc-800 rounded-2xl">
+                                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <Shield size={16} className="text-emerald-500" /> Philosophical Protocol: 100% Linux
+                                </h3>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <h4 className="text-xs font-bold text-zinc-300">Freedom to Tinker</h4>
+                                        <p className="text-[10px] text-zinc-500 leading-relaxed">
+                                            Everything you see is open. From the bootloader scripts to the Wayland compositor hooks. We believe gaming hardware should never be a "black box".
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-xs font-bold text-zinc-300">Privacy by Design</h4>
+                                        <p className="text-[10px] text-zinc-500 leading-relaxed">
+                                            The Installation AI is a localized heuristic engine. It never phones home. Your hardware profile stays on your machine, always.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
                     </AnimatePresence>
                 </div>

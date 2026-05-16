@@ -284,7 +284,7 @@ export const SystemMonitorApp: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                    <p className="text-sm font-bold text-white">Hybrid Active</p>
-                   <p className="text-[9px] text-zinc-500 uppercase font-mono tracking-tighter">Mode: Local Heuristics</p>
+                   <p className="text-[9px] text-emerald-500/80 uppercase font-mono tracking-tighter">OS: Linux 6.8 [Pure Open Source]</p>
                 </div>
                 <div className="flex gap-1">
                    {[1,2,3].map(i => (

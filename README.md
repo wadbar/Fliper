@@ -3,9 +3,9 @@
 ![FliperOS Logo](https://img.shields.io/badge/FliperOS-Ultimate%20Edition-black?style=for-the-badge&logo=linux)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)
 ![Security](https://img.shields.io/badge/Security-A%2B-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
+![License](https://img.shields.io/badge/License-GPL--3.0-brightgreen?style=for-the-badge)
 
-FliperOS Unified Desktop is an **industrial-grade, AI-ready OS customization platform and emulation master server**. Engineered for high-performance edge hardware, massive scale, and Zero-Trust environments.
+FliperOS Unified Desktop is a **100% Open Source, industrial-grade, AI-powered Linux customization platform**. Built on the philosophy of total user independence and software freedom.
 
 ---
 

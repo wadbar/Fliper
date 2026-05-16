@@ -305,6 +305,19 @@ export const CustomizerApp: React.FC = () => {
                         />
                     </div>
                 </section>
+
+                {/* Open Source Philosophy */}
+                <section className="pb-8">
+                    <div className="p-4 bg-emerald-500/5 border border-dashed border-emerald-500/20 rounded-xl">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Shield size={14} className="text-emerald-500" />
+                            <span className="text-[10px] font-black text-white uppercase tracking-tighter">Open Source Manifesto</span>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-tight">
+                            FliperOS is built on <span className="text-emerald-400">GNU/Linux</span>. All kernel modifications, drivers, and UI wrappers are provided under the <span className="text-white">GPL-3.0 License</span>. No telemetry, no proprietary blobs unless explicitly requested by the user for hardware compatibility.
+                        </p>
+                    </div>
+                </section>
             </div>
 
             {/* Build Bar */}
