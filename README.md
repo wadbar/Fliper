@@ -41,7 +41,7 @@ graph TD
     end
 
     A <--> D
-    K -.->|Graceful Shutdown| API
+    K -.->|Graceful Shutdown| D
 ```
 
 ---

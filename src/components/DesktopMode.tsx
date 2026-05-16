@@ -17,10 +17,11 @@ import { StorageApp } from './apps/StorageApp';
 import { CustomizerApp } from './apps/CustomizerApp';
 import { StreamApp } from './apps/StreamApp';
 import { LeaderboardsApp } from './apps/LeaderboardsApp';
+import { WikiApp } from './apps/WikiApp';
 
 // Advanced UI Component
 import { CrtOverlay } from './CrtOverlay';
-import { Shield } from 'lucide-react';
+import { Shield, Book } from 'lucide-react';
 
 // Strategy Pattern: Externalized custom hook for Window Management
 function useWindowManager() {
@@ -200,6 +201,13 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
           </div>
           <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-yellow-500">Leaderboards</span>
         </button>
+
+        <button onDoubleClick={() => toggleWindow('wiki')} className="flex flex-col items-center gap-1 group w-24">
+          <div className="w-14 h-14 rounded-2xl bg-sky-600/10 border border-sky-500/40 text-sky-400 flex items-center justify-center backdrop-blur shadow-lg shadow-sky-500/10 group-hover:bg-sky-500/30 group-hover:scale-105 transition-all">
+            <Book size={28} />
+          </div>
+          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-sky-400">Install Wiki</span>
+        </button>
         
         <button onDoubleClick={() => toggleWindow('settings')} className="flex flex-col items-center gap-1 group w-24 mt-auto">
           <div className="w-14 h-14 rounded-2xl bg-zinc-800/60 border border-zinc-600/60 text-zinc-300 flex items-center justify-center backdrop-blur shadow-lg shadow-black/20 group-hover:bg-zinc-700/80 group-hover:scale-105 transition-all">
@@ -371,6 +379,22 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
             <LeaderboardsApp />
           </OsWindow>
         )}
+        {openWindows.includes('wiki') && (
+          <OsWindow
+            key="wiki"
+            id="wiki"
+            title="Sovereign Hardware Codex"
+            icon={<Book size={16} className="text-sky-400" />}
+            isActive={activeWindow === 'wiki'}
+            onFocus={() => bringToFront('wiki')}
+            onClose={() => closeWindow('wiki')}
+            defaultSize={{ width: 950, height: 650 }}
+            defaultPosition={{ x: 120, y: 40 }}
+            zIndex={getZIndex('wiki')}
+          >
+            <WikiApp />
+          </OsWindow>
+        )}
       </AnimatePresence>
       <div className="absolute bottom-0 w-full h-12 bg-black/80 backdrop-blur-3xl border-t border-white/10 flex items-center px-4 z-50">
         <button onClick={onSwitchMode} className="flex items-center gap-2 px-4 h-9 bg-indigo-600 hover:bg-indigo-500 rounded-md text-sm font-bold text-white shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all">
@@ -400,6 +424,7 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
               {id === 'customizer' && <Cpu size={14} className={activeWindow === id ? 'text-indigo-400' : ''} />}
               {id === 'stream' && <Radio size={14} className={activeWindow === id ? 'text-red-500' : ''} />}
               {id === 'leaderboards' && <Trophy size={14} className={activeWindow === id ? 'text-yellow-500' : ''} />}
+              {id === 'wiki' && <Book size={14} className={activeWindow === id ? 'text-sky-400' : ''} />}
               {id === 'settings' && <Settings size={14} />}
               <span className="truncate capitalize">{id}</span>
             </button>
