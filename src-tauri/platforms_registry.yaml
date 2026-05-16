@@ -1,0 +1,114 @@
+# Fliper - Supported Platforms & Genres Registry
+categories:
+  home_consoles:
+    - name: "Nintendo Entertainment System"
+      slug: "nes"
+      manufacturer: "Nintendo"
+      genres: ["Platformer", "Action", "RPG", "Puzzle"]
+    - name: "Super Nintendo Entertainment System"
+      slug: "snes"
+      manufacturer: "Nintendo"
+      genres: ["Action-Platformer", "JRPG", "Beat 'em up", "Fighting (2D)"]
+    - name: "Nintendo 64"
+      slug: "n64"
+      manufacturer: "Nintendo"
+      genres: ["Platformer (3D)", "Racer (Arcade)", "Shooter (FPS)"]
+    - name: "Nintendo GameCube"
+      slug: "gamecube"
+      manufacturer: "Nintendo"
+      genres: ["Action-Adventure", "Platformer (3D)", "Party Games", "Racing (Arcade)"]
+    - name: "Nintendo Wii"
+      slug: "wii"
+      manufacturer: "Nintendo"
+      genres: ["Party Games", "Action-Adventure", "Platformer"]
+    - name: "Sony PlayStation"
+      slug: "ps1"
+      manufacturer: "Sony"
+      genres: ["JRPG", "Survival Horror", "Stealth", "Racing (Sim)"]
+    - name: "Sony PlayStation 2"
+      slug: "ps2"
+      manufacturer: "Sony"
+      genres: ["Action-Adventure", "JRPG", "Platformer (3D)", "Hack and Slash"]
+    - name: "Sony PlayStation 3"
+      slug: "ps3"
+      manufacturer: "Sony"
+      genres: ["FPS", "Action-Adventure", "RPG", "Fighting (3D)"]
+    - name: "Sega Mega Drive / Genesis"
+      slug: "megadrive"
+      manufacturer: "Sega"
+      genres: ["Action-Platformer", "Beat 'em up", "Shoot 'em up (Shmup)"]
+    - name: "Sega Saturn"
+      slug: "saturn"
+      manufacturer: "Sega"
+      genres: ["Fighting (2D)", "Fighting (3D)", "Shoot 'em up (Shmup)", "RPG"]
+    - name: "Sega Dreamcast"
+      slug: "dreamcast"
+      manufacturer: "Sega"
+      genres: ["Fighting (3D)", "Racing (Arcade)", "Action-Adventure"]
+    - name: "Microsoft Xbox"
+      slug: "xbox"
+      manufacturer: "Microsoft"
+      genres: ["FPS", "Racing (Sim)", "Action RPG"]
+
+  handhelds:
+    - name: "Nintendo Game Boy"
+      slug: "gb"
+      manufacturer: "Nintendo"
+      genres: ["Platformer", "Puzzle", "RPG"]
+    - name: "Nintendo Game Boy Advance"
+      slug: "gba"
+      manufacturer: "Nintendo"
+      genres: ["Action-Platformer", "JRPG", "Tactical RPG", "Metroidvania"]
+    - name: "Nintendo DS"
+      slug: "nds"
+      manufacturer: "Nintendo"
+      genres: ["JRPG", "Visual Novel", "Puzzle"]
+    - name: "Nintendo 3DS"
+      slug: "3ds"
+      manufacturer: "Nintendo"
+      genres: ["JRPG", "Platformer (3D)", "Action RPG"]
+    - name: "Sony PlayStation Portable"
+      slug: "psp"
+      manufacturer: "Sony"
+      genres: ["Action-Adventure", "JRPG", "Rhythm", "Tactical RPG"]
+    - name: "Sony PS Vita"
+      slug: "psvita"
+      manufacturer: "Sony"
+      genres: ["JRPG", "Visual Novel", "Action-Adventure"]
+    
+  arcade:
+    - name: "Arcade (MAME)"
+      slug: "mame"
+      manufacturer: "Various"
+      genres: ["Beat 'em up", "Fighting (2D)", "Shoot 'em up (Shmup)", "Run and Gun"]
+    - name: "Neo Geo MVS"
+      slug: "neogeo"
+      manufacturer: "SNK"
+      genres: ["Fighting (2D)", "Run and Gun", "Sports"]
+    - name: "Capcom Play System 2"
+      slug: "cps2"
+      manufacturer: "Capcom"
+      genres: ["Fighting (2D)", "Beat 'em up"]
+
+  modern_pc:
+    - name: "Windows (PC)"
+      slug: "pc_windows"
+      manufacturer: "Microsoft"
+      genres: ["FPS", "MMORPG", "RTS", "MOBA", "Survival"]
+    - name: "MS-DOS"
+      slug: "ms-dos"
+      manufacturer: "Microsoft"
+      genres: ["Point-and-Click", "FPS", "RPG (CRPG)"]
+
+special_tags:
+  recompilation:
+    - "zelda_64_recomp"
+    - "jak_and_daxter_opengoal"
+    - "sm64_pc"
+    description: "Portes de código-fonte recompilados estaticamente para execução nativa com performance moderna"
+  
+  japanese_arcades:
+    - "teknoparrot"
+    - "sega_model_3"
+    - "nesica_x_live"
+    description: "Arcades modernos ou exóticos japoneses rodando via loaders específicos (Taito Type X, Sega RingEdge, etc)"

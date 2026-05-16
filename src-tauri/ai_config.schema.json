@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fliper AI Configuration Schema",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["local", "cloud", "hybrid"],
+      "default": "hybrid",
+      "description": "Modo de processamento. Hybrid tenta local (Ollama) primeiro e cai para cloud via API."
+    },
+    "local_endpoint": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "default": "http://127.0.0.1:11434" },
+        "model": { "type": "string", "default": "llama3" },
+        "vision_model": { "type": "string", "default": "llava" },
+        "timeout_ms": { "type": "integer", "default": 2500 }
+      }
+    },
+    "cloud_api": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string", "enum": ["gemini", "openai"] },
+        "endpoint": { "type": "string", "default": "https://generativelanguage.googleapis.com" },
+        "api_key": { "type": "string" },
+        "model": { "type": "string", "default": "gemini-2.5-flash" }
+      },
+      "required": ["api_key", "provider"]
+    }
+  },
+  "required": ["mode", "local_endpoint"]
+}

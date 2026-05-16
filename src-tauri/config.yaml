@@ -1,0 +1,79 @@
+# ==========================================
+# Fliper - Central Configuration (config.yaml)
+# ==========================================
+
+system:
+  # Inicia automaticamente no Modo Big Screen
+  default_mode: "bigscreen" 
+  
+  # i18n
+  language: "pt-BR"
+  
+  # Limita o uso de memória do App (Watchdog check)
+  max_ram_mb: 2048
+
+performance:
+  # 'hardware_accel_on' ou 'hardware_accel_off' (lite)
+  render_mode: "hardware_accel_on"
+  multithreading: true
+
+arcade_mode:
+  # Ativa o Shell Lock no boot do Windows
+  boot_to_shell: true
+  
+  # Usa raw input da API do Windows para garantir captura de controle
+  exclusive_input: true
+  
+  # Se o processo principal cair, o Watchdog reinicia em X ms
+  watchdog_restart_delay_ms: 1000
+
+ai_core:
+  enabled: true
+  stealth_mode: true # Roda em thread separada, UI não bloqueia
+  auto_vram_release: true # Desliga LLM se emulator pedir muita RAM (RPCS3)
+  profiles:
+    active: "assistido" # hardcore, discovery, assistido
+    
+wsl:
+  # Ambiente padrão do WSL2
+  distro: "Debian"
+  
+  # Otimização de RAM: Reserva fatia via .wslconfig gerenciado pelo app
+  memory_limit: "4GB"
+  processors: 4
+  
+  # Caminho base para mapeamento automático
+  # ex: mounts de C:\ vão para /mnt/c/
+  mount_prefix: "/mnt"
+
+scraping:
+  threads: 4
+  validate_hashes: true
+  sources:
+    - name: "ScreenScraper"
+      enabled: true
+      credentials:
+        username: ""
+        password: ""
+  download_assets:
+    cover_art: true
+    video_snap: true
+    clear_logo: true
+    bezel: true
+
+paths:
+  roms: "C:\\Roms"
+  media: "C:\\FliperData\\Media"
+  database: "C:\\FliperData\\fliper.sqlite"
+
+emulators:
+  - name: "RetroArch"
+    wsl_executable: "retroarch"
+    cores_path: "/usr/lib/x86_64-linux-gnu/libretro/"
+    platforms:
+      - id: "snes"
+        core: "snes9x_libretro.so"
+        extensions: [".smc", ".sfc", ".zip"]
+      - id: "megadrive"
+        core: "genesis_plus_gx_libretro.so"
+        extensions: [".md", ".bin", ".zip"]

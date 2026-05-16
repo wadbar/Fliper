@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fliper Global Download Repositories",
+  "description": "A registry of trusted sources for automated BIOS, Custom Cores, and Emulator downloads.",
+  "repositories": [
+    {
+      "id": "retroarch-cores-ubuntu",
+      "type": "buildbot",
+      "system": "wsl2_debian",
+      "url": "https://buildbot.libretro.com/nightly/linux/x86_64/latest/",
+      "auto_update": true,
+      "verify_signature": false
+    },
+    {
+      "id": "pcsx2-nightly",
+      "type": "github_releases",
+      "system": "windows_native",
+      "repo": "PCSX2/pcsx2",
+      "asset_regex": "pcsx2-v.*-windows-x64-Qt\\.7z",
+      "extract_method": "7z"
+    },
+    {
+      "id": "rpcs3-binaries",
+      "type": "custom_api",
+      "system": "wsl2_debian",
+      "url": "https://rpcs3.net/api/v1/builds/linux",
+      "format": "AppImage",
+      "chmod_execute": true
+    },
+    {
+      "id": "screenscraper_fr",
+      "type": "metadata_api",
+      "api_endpoint": "https://www.screenscraper.fr/api2/",
+      "auth_required": true,
+      "rate_limit_ms": 1000
+    },
+    {
+      "id": "mobygames",
+      "type": "metadata_api",
+      "api_endpoint": "https://api.mobygames.com/v1/",
+      "auth_required": true
+    }
+  ]
+}

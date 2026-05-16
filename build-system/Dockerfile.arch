@@ -1,0 +1,35 @@
+FROM archlinux:base-devel
+
+# Atualiza os pacotes e instala dependências base para modo Kiosk
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+    xorg-server xorg-xinit \
+    gamescope \
+    cage \
+    chromium \
+    nodejs npm \
+    git \
+    unzip \
+    && pacman -Scc --noconfirm
+
+# Cria usuário arcade
+RUN useradd -m -g users -G wheel,audio,video -s /bin/bash arcade
+
+# Prepara o diretório da aplicação
+WORKDIR /home/arcade/fliperos
+COPY . .
+RUN chown -R arcade:users /home/arcade/fliperos
+
+# Copia script de inicialização do Kiosk/Gamescope
+COPY build-system/kiosk-entrypoint.sh /home/arcade/kiosk-entrypoint.sh
+RUN chmod +x /home/arcade/kiosk-entrypoint.sh && \
+    chown arcade:users /home/arcade/kiosk-entrypoint.sh
+
+USER arcade
+
+# Instala dependências do FliperOS e compila
+RUN npm install
+RUN npm run build
+
+# O entrypoint inicia o backend Node.js e joga o Chromium em tela cheia usando Cage/Gamescope
+ENTRYPOINT ["/home/arcade/kiosk-entrypoint.sh"]

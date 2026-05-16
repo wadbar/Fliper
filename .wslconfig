@@ -1,0 +1,15 @@
+[wsl2]
+# Utiliza 32GB da memória, reservando os outros 32GB para o Windows/Frontend
+memory=32GB 
+processors=12
+# Desativa swap em disco para forçar todo o carregamento na RAM e evitar I/O
+swap=0
+# Fundamental para o X-Server / WSLg conversar com o Frontend Tauri
+localhostForwarding=true
+
+[experimental]
+# Ativa modo GPU Passthrough Nativo para Placas NVIDIA (RTX 5060) e Vulkan via mesa
+# Os núcleos CUDA ficarão inteiramente visíveis para os binários Linux (ex: Retroarch shaders, IA Local via WSL)
+autoMemoryReclaim=dropcache
+sparseVhd=true
+hostAddressLoopback=true

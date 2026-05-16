@@ -1,0 +1,47 @@
+# Fliper - Ecosystem Extension & Deep Infrastructure (Tabela de Repositórios e Fontes)
+# Esta configuração vai orientar o Global Importer v2 e a montagem de ambiente de IA.
+
+sources:
+  - system: "MAME"
+    repo: "MAMEdev GitHub / Archive.org"
+    emulation_method: "Nativo WSL2 (Debian)"
+    optimizations: 
+      - "Audio Sample RAM-Caching"
+      - "HLSL/BGFX Shaders Otimizados (RTX 5060)"
+      - "Audit de ROMs em Tempo Real via DAT"
+
+  - system: "Sega Saturn"
+    repo: "SSF / Mednafen Core"
+    emulation_method: "WSL2 (Mesa/Vulkan)"
+    optimizations:
+      - "Vulkan Pass-through / Hardware Acceleration"
+
+  - system: "Arcade Japão"
+    repo: "TeknoParrot / Model3 Repo"
+    emulation_method: "Nativo Windows (Exec)"
+    loaders:
+      - "TeknoParrot"
+      - "Taito Type X (Loader Injetado)"
+      - "Sega Naomi (Flycast via WSL2)"
+      - "Supermodel (Sega Model 3)"
+
+  - system: "Assets/Capas"
+    repo: "ScreenScraper.fr / LaunchBox"
+    emulation_method: "Multi-thread Scraper"
+    features: 
+      - "Deep Memory Cache de Capas em RAM Disk"
+      - "Jukebox de Mídia Instantânea (Cocktail)"
+
+lite_mode_sources:
+  - system: "MAME (Clássicos 80/90)"
+    repo: "MAME 0.139u1 (MAME4iOS/Droid base)"
+    emulation_method: "Versão otimizada para hardware fraco"
+  - system: "CPS1, CPS2 e NeoGeo"
+    repo: "FinalBurn Alpha (FBA)"
+    emulation_method: "Mais leve que o MAME moderno"
+  - system: "PC Engine / TG-16"
+    repo: "Beetle PCE Fast"
+    emulation_method: "Excelente para Shmups sem exigir CPU"
+  - system: "Game Boy / Color"
+    repo: "Gambatte"
+    emulation_method: "Extremamente leve e preciso"

@@ -1,0 +1,9 @@
+{
+  "name": "FliperOS Unified Desktop",
+  "description": "Industrial-grade Retrogaming Ecosystem with AI-Driven Metadata Enrichment, Kernel-Level task management, and Professional SRE Observability.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
