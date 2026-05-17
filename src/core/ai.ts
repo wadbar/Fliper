@@ -1,26 +1,42 @@
-import { aiOrchestrator } from './ai/orchestrator';
 import { GameMetadata, KernelIntent } from './ai/types';
 
 /**
- * ELITE AI CORE: FLIPEROS KERNEL BRIDGE
- * This module coordinates neural processing across multiple providers (Gemini / Ollama).
+ * SOVEREIGN AI BRIDGE: FLIPEROS KERNEL
+ * Routes all neural requests to the server-side fortified engine.
  */
 
-export function getSystemKnowledgeBase() {
-    return {
-        timestamp: new Date().toISOString(),
-        kernel: "FliperOS 2.6.0-PRO (Zen-Hybrid)",
-        features: ["Predictive Pre-fetch", "Circuit Breaker v2", "Secure Kernel Proxy", "Vulkan 1.4Ready"],
-        architecture: "Distributed Orchestration",
-        health_status: "OPTIMIZED"
-    };
-}
-
 export async function enrichGameData(title: string, platform: string): Promise<GameMetadata | null> {
-    return aiOrchestrator.enrichGameData(title, platform);
+    try {
+        const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+        const res = await fetch(`${baseUrl}/api/ai/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, platform })
+        });
+        if (!res.ok) throw new Error('BRIDGE_FAULT');
+        return await res.json();
+    } catch (e) {
+        console.warn("AI_BRIDGE: Falling back to silent mode", e);
+        return null;
+    }
 }
 
-export async function processKernelIntent(promptUsuario: string): Promise<KernelIntent> {
-    const kb = getSystemKnowledgeBase();
-    return aiOrchestrator.processKernelIntent(promptUsuario, kb);
+export async function processKernelIntent(prompt: string): Promise<KernelIntent> {
+    try {
+        const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+        const res = await fetch(`${baseUrl}/api/ai/intent`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+        if (!res.ok) throw new Error('BRIDGE_FAULT');
+        return await res.json();
+    } catch (e) {
+        return {
+            categoria: 'system',
+            termo_busca: prompt,
+            acao: 'error',
+            resumo_ia: 'Neural Link Offline: Kernel operating in localized fallback mode.'
+        };
+    }
 }

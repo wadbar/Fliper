@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Book, Cpu, Smartphone, Monitor, Zap, Terminal, Shield, HardDrive, Info, Share2, Download, ExternalLink, Box } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Book, Cpu, Smartphone, Monitor, Zap, Terminal, Shield, HardDrive, Info, Share2, Download, ExternalLink, Box, Sparkles, Send, Loader2, MessageSquare, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { processKernelIntent } from '../../core/ai';
 
 interface GuideSection {
     id: string;
@@ -13,10 +14,45 @@ interface GuideSection {
 
 export const WikiApp: React.FC = () => {
     const [activeSection, setActiveSection] = useState<string>('top-pc');
+    const [assistantOpen, setAssistantOpen] = useState(false);
+    const [prompt, setPrompt] = useState('');
+    const [isThinking, setIsThinking] = useState(false);
+    const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string}[]>([]);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const handleAskAI = async () => {
+        if (!prompt.trim()) return;
+        
+        const userMsg = prompt;
+        setPrompt('');
+        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+        setIsThinking(true);
+
+        try {
+            const result = await processKernelIntent(userMsg);
+            setMessages(prev => [...prev, { 
+                role: 'ai', 
+                content: result.resumo_ia || "I'm sorry, I couldn't reach the neural core at this time." 
+            }]);
+        } catch (e) {
+            setMessages(prev => [...prev, { role: 'ai', content: "Neural bridge malfunction. Check kernel logs." }]);
+        } finally {
+            setIsThinking(false);
+        }
+    };
 
     const sections: GuideSection[] = [
         {
             id: 'top-pc',
+// ... (rest of sections keep same)
             title: 'Modern High-End PC',
             icon: <Zap size={18} />,
             color: 'text-indigo-400',
@@ -361,10 +397,104 @@ export const WikiApp: React.FC = () => {
                     <span className="flex items-center gap-1"><Terminal size={12} /> SHA-256 Verified</span>
                     <span className="flex items-center gap-1"><Shield size={12} /> Secure Boot Compatible</span>
                 </div>
-                <div className="text-zinc-600 font-mono">
-                    REF: GUID_INSTALL_FACTORY_V2
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => setAssistantOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-indigo-400 hover:bg-indigo-500/20 transition-all cursor-pointer"
+                    >
+                        <Sparkles size={12} /> Ask Neural Assistant
+                    </button>
+                    <div className="text-zinc-600 font-mono">
+                        REF: GUID_INSTALL_FACTORY_V2
+                    </div>
                 </div>
             </div>
+
+            {/* Neural Assistant Shelf */}
+            <AnimatePresence>
+                {assistantOpen && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setAssistantOpen(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
+                        />
+                        <motion.div 
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="absolute top-0 right-0 h-full w-96 bg-[#0E0E10] border-l border-zinc-800 shadow-2xl z-50 flex flex-col"
+                        >
+                            <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/20">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-500/20 rounded-lg">
+                                        <Brain size={20} className="text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Neural Assistant</h3>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Sovereign Knowledge Base</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setAssistantOpen(false)} className="text-zinc-500 hover:text-white">&times;</button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                                {messages.length === 0 && (
+                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
+                                        <MessageSquare size={40} className="text-zinc-600" />
+                                        <p className="text-xs text-zinc-500 max-w-[200px]">How can I assist with your Frankenstein build today?</p>
+                                    </div>
+                                )}
+                                {messages.map((msg, i) => (
+                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed ${
+                                            msg.role === 'user' 
+                                                ? 'bg-indigo-600 text-white rounded-tr-none' 
+                                                : 'bg-zinc-800/80 text-zinc-200 border border-zinc-700 rounded-tl-none font-mono'
+                                        }`}>
+                                            {msg.content}
+                                        </div>
+                                    </div>
+                                ))}
+                                {isThinking && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-zinc-800/80 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
+                                            <Loader2 size={14} className="text-indigo-400 animate-spin" />
+                                            <span className="text-[10px] text-zinc-500 font-mono italic">Decrypting knowledge...</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <div ref={chatEndRef} />
+                            </div>
+
+                            <div className="p-6 border-t border-zinc-800 bg-zinc-900/10">
+                                <form 
+                                    onSubmit={(e) => { e.preventDefault(); handleAskAI(); }}
+                                    className="relative"
+                                >
+                                    <input 
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        placeholder="Type your hardware query..."
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 pl-4 pr-12 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                                    />
+                                    <button 
+                                        type="submit"
+                                        disabled={isThinking || !prompt.trim()}
+                                        className="absolute right-2 top-1.5 p-1.5 bg-indigo-600 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-500 transition-colors"
+                                    >
+                                        <Send size={14} />
+                                    </button>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
+

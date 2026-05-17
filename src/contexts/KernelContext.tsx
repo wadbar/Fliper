@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-type KernelAction = 'open_window' | 'trigger_download' | 'system_alert' | 'update_settings';
+type KernelAction = 'open_window' | 'trigger_download' | 'trigger_search' | 'system_alert' | 'update_settings';
 
 interface KernelCommand {
     id: string;

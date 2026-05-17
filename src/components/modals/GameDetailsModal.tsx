@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Play, Clock, Trophy, Award, Calendar, User, Tag, Sparkles, Cpu, Zap, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { X, Play, Clock, Trophy, Award, Calendar, User, Tag, Sparkles, Cpu, Zap, ShieldCheck, Palette } from 'lucide-react';
 import { Game } from '../../data/games';
+import { AiArtGenerator } from '../apps/AiArtGenerator';
 
 interface GameDetailsModalProps {
   game: Game | null;
@@ -10,15 +11,33 @@ interface GameDetailsModalProps {
   onLaunch: () => void;
   onEnrich?: (gameId: string) => Promise<void>;
   isEnriching?: boolean;
+  onUpdateCover?: (gameId: string, newUrl: string) => void;
 }
 
-export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({ game, isOpen, onClose, onLaunch, onEnrich, isEnriching }) => {
+export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({ 
+  game, 
+  isOpen, 
+  onClose, 
+  onLaunch, 
+  onEnrich, 
+  isEnriching,
+  onUpdateCover
+}) => {
+  const [showGenerator, setShowGenerator] = useState(false);
+  
   if (!game) return null;
 
   const handleEnrich = async () => {
     if (onEnrich) {
       await onEnrich(game.id);
     }
+  };
+
+  const handleUpdateCover = (newUrl: string) => {
+    if (onUpdateCover) {
+      onUpdateCover(game.id, newUrl);
+    }
+    setShowGenerator(false);
   };
 
   const handleVerifyIntegrity = async () => {
@@ -102,6 +121,36 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({ game, isOpen
                 <div className="mt-6 space-y-2">
                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">Advanced</p>
                     
+                    <button 
+                      onClick={() => setShowGenerator(!showGenerator)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all group ${showGenerator ? 'bg-indigo-600 text-white' : 'bg-zinc-800/50 hover:bg-indigo-600/20 border border-zinc-700 hover:border-indigo-500/50 text-zinc-300 hover:text-indigo-300'}`}
+                    >
+                      <Palette size={16} className={`group-hover:rotate-12 transition-transform ${showGenerator ? 'text-white' : 'text-indigo-400'}`} />
+                      <div className="text-left">
+                         <p className="text-xs font-bold leading-none mb-1">AI Cover Art</p>
+                         <p className={`text-[9px] font-medium tracking-tighter uppercase whitespace-nowrap ${showGenerator ? 'text-indigo-200' : 'text-zinc-500'}`}>Generate Box Art</p>
+                      </div>
+                    </button>
+
+                    <AnimatePresence>
+                      {showGenerator && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <AiArtGenerator 
+                             gameTitle={game.title}
+                             genre={game.genre}
+                             platform={game.platform}
+                             onImageGenerated={handleUpdateCover}
+                             className="mt-2"
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <button 
                       onClick={handleEnrich}
                       disabled={isEnriching}

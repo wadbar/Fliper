@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Download, X, Image as ImageIcon, Gamepad2, Settings, Cloud, Loader2, Search, Sparkles, Database, FileArchive, AlertTriangle, Package } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { processKernelIntent } from '../core/ai';
+import { KernelIntent } from '../core/ai/types';
 
 interface DownloaderModalProps {
   isOpen: boolean;
@@ -84,6 +85,7 @@ export const DownloaderModal: React.FC<DownloaderModalProps> = ({ isOpen, onClos
   // NLP Search
   const [promptInput, setPromptInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [latestIntent, setLatestIntent] = useState<KernelIntent | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   // Elite Optimization: Resilient SSE with auto-reconnect
@@ -97,7 +99,7 @@ export const DownloaderModal: React.FC<DownloaderModalProps> = ({ isOpen, onClos
     const connectSSE = () => {
       if (!isMounted) return;
       setConnectionStatus('connecting');
-      eventSource = new EventSource('/api/download/status');
+      eventSource = new EventSource('/api/system/download/status');
       
       eventSource.onopen = () => {
         if (isMounted) setConnectionStatus('connected');
@@ -152,19 +154,22 @@ export const DownloaderModal: React.FC<DownloaderModalProps> = ({ isOpen, onClos
   const handlePromptSearch = async () => {
     if (!promptInput.trim()) return;
     setIsSearching(true);
+    setLatestIntent(null);
     try {
       const result = await processKernelIntent(promptInput);
+      setLatestIntent(result);
+      
       if (result.acao === 'download') {
         const type = result.categoria || 'roms';
         const name = result.termo_busca || 'Unknown Asset';
         handleDownload(type, name);
         setPromptInput('');
-      } else {
-        alert(result.resumo_ia || "O catálogo não possui este recurso no momento.");
+      } else if (result.acao === 'search' && (!result.resultados || result.resultados.length === 0)) {
+        // If it was a search but no results were returned, maybe it's a direct download intent that failed to be identified as such
+        // or just a query that returned nothing.
       }
     } catch (e) {
       console.error(e);
-      alert("Erro ao buscar.");
     } finally {
       setIsSearching(false);
     }
@@ -219,6 +224,55 @@ export const DownloaderModal: React.FC<DownloaderModalProps> = ({ isOpen, onClos
                    {t('ai_search_btn')}
                 </button>
               </div>
+
+              {/* AI Feedback & Results */}
+              <AnimatePresence>
+                {latestIntent && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-2"
+                  >
+                    <div className="p-3 bg-black/40 border border-zinc-800 rounded-lg space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                          <Sparkles size={12} className="text-indigo-400" />
+                        </div>
+                        <p className="text-xs text-zinc-300 leading-relaxed italic">
+                          {latestIntent.resumo_ia}
+                        </p>
+                      </div>
+
+                      {latestIntent.resultados && latestIntent.resultados.length > 0 && (
+                        <div className="grid grid-cols-1 gap-2 border-t border-zinc-800/50 pt-3">
+                          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1 mb-1">Found matching assets:</p>
+                          {latestIntent.resultados.map((res, idx) => (
+                            <div 
+                              key={idx}
+                              className="group flex items-center justify-between p-2 rounded-lg bg-zinc-800/30 border border-zinc-800 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all"
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-bold text-zinc-200 group-hover:text-white transition-colors">{res.nome}</span>
+                                <div className="flex items-center gap-2">
+                                   <span className="text-[9px] text-zinc-500 font-mono uppercase bg-zinc-900 px-1 rounded">{res.plataforma}</span>
+                                   <span className="text-[9px] text-indigo-400 font-bold uppercase">{res.categoria}</span>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => handleDownload(res.categoria, res.nome)}
+                                className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all"
+                              >
+                                <Download size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Quick Actions */}

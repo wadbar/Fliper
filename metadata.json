@@ -1,6 +1,6 @@
 {
-  "name": "FliperOS Unified Desktop",
-  "description": "Industrial-grade Retrogaming Ecosystem with AI-Driven Metadata Enrichment, Kernel-Level task management, and Professional SRE Observability.",
+  "name": "FliperOS Sovereign V8",
+  "description": "Industrial-grade Retrogaming Ecosystem powered by the Sovereign AI V8 architecture. Features multi-tier neural fallback pipelines, real-time SRE telemetry, and predictive system optimization.",
   "requestFramePermissions": [
     "camera",
     "microphone",

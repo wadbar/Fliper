@@ -1,5 +1,4 @@
 import { KernelProxy } from "./KernelProxy";
-import { aiOrchestrator } from "../../core/ai/orchestrator";
 import { queueManager } from "./QueueManager";
 import { logger } from "./Logger";
 import { WebhookManager } from "./WebhookManager";
@@ -24,8 +23,8 @@ export class SystemIntegritySuite {
         // 1. Kernel Proxy Check
         results.push(await this.testKernelProxy());
 
-        // 2. AI Orchestrator Latency
-        results.push(await this.testAIOrchestrator());
+        // 2. AI Resiliency Engine Check
+        results.push(await this.testAIEngine());
 
         // 3. Queue Manager Pressure
         results.push(await this.testQueuePressure());
@@ -54,20 +53,27 @@ export class SystemIntegritySuite {
             return { component: "Kernel Proxy IPC", passed: false, latency: Date.now() - start, message: e.message };
         }
     }
-    //... AI and Queue checks remain similar, just ensuring robustness
-    private static async testAIOrchestrator(): Promise<TestResult> {
+
+    private static async testAIEngine(): Promise<TestResult> {
         const start = Date.now();
         try {
-            // Test with a generic intent
-            const res = await aiOrchestrator.processKernelIntent("ping system status", {});
+            // @ts-expect-error - ESM dynamic import
+            const { generate } = await import("../../services/aiEngine.mjs");
+            
+            const res = await generate({ 
+                prompt: "perform integrity handshake",
+                systemInstruction: "Respond with 'VERIFIED' if you are operational.",
+                temperature: 0.1
+            });
+            
             return {
-                component: "AI Orchestrator (Neural)",
-                passed: !!res.acao,
+                component: "Neural Core (Resilient)",
+                passed: res.success,
                 latency: Date.now() - start,
-                message: `Provider: ${res.resumo_ia.substring(0, 30)}...`
+                message: res.success ? `Provider: ${res.provider} (Active)` : "Neural Collapse"
             };
         } catch (e: any) {
-            return { component: "AI Orchestrator (Neural)", passed: false, latency: Date.now() - start, message: e.message };
+            return { component: "Neural Core (Resilient)", passed: false, latency: Date.now() - start, message: e.message };
         }
     }
 

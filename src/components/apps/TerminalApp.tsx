@@ -38,6 +38,7 @@ export const TerminalApp: React.FC = () => {
         `  neofetch  - ${t('term_neofetch')}`,
         `  ls        - ${t('term_ls')}`,
         `  scan      - ${t('term_scan')}`,
+        `  tail      - Stream system logs in real-time`,
         `  build-iso - ${t('term_build')}`,
         `  wsl-check - Check Windows Subsystem for Linux 2 Integration`
       ]);
@@ -65,6 +66,19 @@ export const TerminalApp: React.FC = () => {
             "SUCCESS: FliperOS v1.0 ISO ready for flashing.",
             "Flash to USB for dedicated cabinet/handheld experience."
         ]);
+        return;
+    }
+
+    if (cmd === 'tail') {
+        setOutput(prev => [...prev, "Streaming logs... Press Ctrl+C would stop (unimplemented), for now it streams 20 logs."]);
+        const eventSource = new EventSource('/api/system/logs/stream');
+        let count = 0;
+        eventSource.onmessage = (event) => {
+            const log = JSON.parse(event.data);
+            setOutput(prev => [...prev, `[LOG] ${log.level}: ${log.message}`]);
+            count++;
+            if (count > 20) eventSource.close();
+        };
         return;
     }
 

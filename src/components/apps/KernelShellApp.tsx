@@ -85,6 +85,9 @@ export const KernelShellApp: React.FC = () => {
             if (intent.acao === 'download') {
                dispatch('trigger_download', { query: intent.termo_busca, category: intent.categoria });
                dispatch('open_window', 'store');
+            } else if (intent.acao === 'search') {
+               dispatch('trigger_search', { query: intent.termo_busca, category: intent.categoria });
+               dispatch('open_window', 'store');
             } else if (intent.acao === 'launch') {
                dispatch('open_window', 'gameManager');
             } else if (intent.acao === 'settings') {

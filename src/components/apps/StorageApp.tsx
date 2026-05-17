@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HardDrive, Trash2, RefreshCw, FileText, FileCode, AlertCircle, Loader2, Cloud, CloudUpload, ExternalLink } from 'lucide-react';
+import { HardDrive, Trash2, RefreshCw, FileText, FileCode, AlertCircle, Loader2, Cloud, CloudUpload, ExternalLink, Layers, Box, Cpu, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SystemFile {
@@ -12,7 +12,7 @@ interface SystemFile {
 export const StorageApp: React.FC = () => {
   const [localFiles, setLocalFiles] = useState<SystemFile[]>([]);
   const [cloudFiles, setCloudFiles] = useState<SystemFile[]>([]);
-  const [tab, setTab] = useState<'local' | 'cloud'>('local');
+  const [tab, setTab] = useState<'local' | 'cloud' | 'layers'>('local');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -93,14 +93,19 @@ export const StorageApp: React.FC = () => {
       {/* Header Stat Area */}
       <div className="p-4 bg-zinc-900/50 border-b border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-           <HardDrive size={20} className={tab === 'local' ? 'text-sky-400' : 'text-zinc-500'} />
-           <Cloud size={20} className={tab === 'cloud' ? 'text-indigo-400' : 'text-zinc-500'} />
+           {tab === 'local' && <HardDrive size={20} className="text-sky-400" />}
+           {tab === 'cloud' && <Cloud size={20} className="text-indigo-400" />}
+           {tab === 'layers' && <Layers size={20} className="text-orange-400" />}
            <div>
               <h3 className="font-bold text-zinc-100 uppercase tracking-tighter">
-                {tab === 'local' ? 'VFS Buffer Node' : 'FliperOS Cloud Vault'}
+                {tab === 'local' && 'VFS Buffer Node'}
+                {tab === 'cloud' && 'FliperOS Cloud Vault'}
+                {tab === 'layers' && 'Frankenstein Runtime Layers'}
               </h3>
               <p className="text-[10px] text-zinc-500">
-                {tab === 'local' ? 'Mount: /database | Status: ONLINE' : 'Status: CONNECTED | Region: US-EAST'}
+                {tab === 'local' && 'Mount: /database | Status: ONLINE'}
+                {tab === 'cloud' && 'Status: CONNECTED | Region: US-EAST'}
+                {tab === 'layers' && 'Isolated Co-existence Modulators: ACTIVE'}
               </p>
            </div>
         </div>
@@ -127,6 +132,12 @@ export const StorageApp: React.FC = () => {
             >
               CLOUD VAULT
             </button>
+            <button 
+              onClick={() => setTab('layers')}
+              className={`pb-1 border-b-2 transition-colors ${tab === 'layers' ? 'border-orange-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+            >
+              LAYERS
+            </button>
          </div>
          <button 
            onClick={refresh}
@@ -138,7 +149,44 @@ export const StorageApp: React.FC = () => {
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-         {loading && currentFiles.length === 0 ? (
+         {tab === 'layers' ? (
+             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                    { id: 'proton', name: 'Proton-GE Runtime', status: 'Active', size: '2.4 GB', desc: 'Windows compatibility via Vulkan' },
+                    { id: 'waydroid', name: 'Waydroid Container', status: 'Standby', size: '1.8 GB', desc: 'Android app layer for Linux' },
+                    { id: 'wine', name: 'Wine-Staging 9.0', status: 'Active', size: '850 MB', desc: 'Direct execution of Windows bin' },
+                    { id: 'box64', name: 'Box64 RISC-V Emul', status: 'Offline', size: '120 MB', desc: 'Running x86_64 on ARM/RISC' },
+                    { id: 'steam-link', name: 'Steam Link Engine', status: 'Active', size: '420 MB', desc: 'Cloud streaming bridge' },
+                    { id: 'kernel-ai', name: 'Neural Core v1.0', status: 'Optimizing', size: '4.2 GB', desc: 'Ollama + Local Heuristics' }
+                ].map(layer => (
+                    <div key={layer.id} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-4 flex gap-4 items-start group hover:border-orange-500/30 transition-all">
+                        <div className="p-2 bg-orange-500/10 rounded-lg text-orange-400 group-hover:scale-110 transition-transform">
+                            <Box size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-bold text-zinc-200 text-xs">{layer.name}</h4>
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${layer.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400' : (layer.status === 'Standby' ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800 text-zinc-500')}`}>
+                                    {layer.status}
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 leading-tight mb-2">{layer.desc}</p>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] text-zinc-600 font-mono italic">{layer.size}</span>
+                                <div className="flex gap-2">
+                                    <button className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors">
+                                        <Cpu size={12} />
+                                    </button>
+                                    <button className="p-1 hover:bg-rose-500/20 rounded text-zinc-500 hover:text-rose-400 transition-colors">
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+             </div>
+         ) : loading && currentFiles.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center opacity-50">
                <Loader2 className="animate-spin mb-2" />
                <span>Scanning blocks...</span>

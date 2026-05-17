@@ -17,8 +17,18 @@ export interface KernelIntent {
     categoria: string;
     termo_busca: string;
     formato_desejado?: string;
-    acao: 'download' | 'launch' | 'settings' | 'sys_report' | 'error';
+    acao: 'download' | 'launch' | 'settings' | 'sys_report' | 'error' | 'search' | 'info' | 'list';
     resumo_ia: string;
+    resultados?: Array<{
+        nome: string;
+        categoria: string;
+        plataforma: string;
+        descricao: string;
+    }>;
+    contexto?: {
+        plataforma?: string;
+        genero?: string;
+    };
 }
 
 export interface AIProvider {

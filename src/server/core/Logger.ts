@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { WebhookManager } from "./WebhookManager";
+import { EventEmitter } from "events";
 
 export enum LogLevel {
     DEBUG = 'DEBUG',
@@ -11,11 +12,12 @@ export enum LogLevel {
     FATAL = 'FATAL'
 }
 
-class TelemetryLogger {
+class TelemetryLogger extends EventEmitter {
     private logDir: string;
     private logFile: string;
 
     constructor() {
+        super();
         this.logDir = path.join(process.cwd(), 'logs');
         this.logFile = path.join(this.logDir, `system-${new Date().toISOString().split('T')[0]}.log`);
         
@@ -65,6 +67,7 @@ class TelemetryLogger {
         }
 
         // Telemetry Integration
+        this.emit('log', payload);
         if (level !== LogLevel.DEBUG) {
             WebhookManager.notify('log', payload);
         }
@@ -72,7 +75,9 @@ class TelemetryLogger {
 
     public debug(msg: string, meta?: any) { this.write(LogLevel.DEBUG, msg, meta); }
     public info(msg: string, meta?: any) { this.write(LogLevel.INFO, msg, meta); }
-    public warn(msg: string, meta?: any) { this.write(LogLevel.WARN, msg, meta); }
+    public warn(msg: string, meta?: any) { 
+        this.write(LogLevel.WARN, msg, meta instanceof Error ? { message: meta.message, stack: meta.stack } : meta); 
+    }
     public error(msg: string, err?: any) { 
         this.write(LogLevel.ERROR, msg, err instanceof Error ? { message: err.message, stack: err.stack } : err); 
     }

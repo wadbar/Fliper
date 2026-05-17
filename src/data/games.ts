@@ -25,7 +25,7 @@ export const games: Game[] = [
     releaseYear: 1990,
     genre: "Platformer",
     coverArt: getLibretroImage("Nintendo_-_Super_Nintendo_Entertainment_System", "Boxarts", "Super Mario World (USA)"),
-    fanArt: getLibretroImage("Nintendo_-_Super_Nintendo_Entertainment_System", "Titles", "Super Mario World (USA)"),
+    fanArt: "https://picsum.photos/seed/mario/1920/1080",
     description: "Junte-se a Mario e Luigi para salvar a Ilha dos Dinossauros! O clássico absoluto do SNES."
   },
   {
@@ -36,7 +36,7 @@ export const games: Game[] = [
     releaseYear: 1991,
     genre: "Platformer",
     coverArt: getLibretroImage("Sega_-_Mega_Drive_-_Genesis", "Boxarts", "Sonic The Hedgehog (USA, Europe)"),
-    fanArt: getLibretroImage("Sega_-_Mega_Drive_-_Genesis", "Titles", "Sonic The Hedgehog (USA, Europe)"),
+    fanArt: "https://picsum.photos/seed/sonic/1920/1080",
     description: "Corra na velocidade da luz como Sonic para impedir o Dr. Robotnik de dominar o mundo."
   },
   {
@@ -47,7 +47,7 @@ export const games: Game[] = [
     releaseYear: 1998,
     genre: "Action-Adventure",
     coverArt: getLibretroImage("Nintendo_-_Nintendo_64", "Boxarts", "Legend of Zelda, The - Ocarina of Time (USA)"),
-    fanArt: getLibretroImage("Nintendo_-_Nintendo_64", "Titles", "Legend of Zelda, The - Ocarina of Time (USA)"),
+    fanArt: "https://picsum.photos/seed/zelda/1920/1080",
     description: "Viaje pelo tempo para impedir Ganondorf e salvar o reino de Hyrule, considerado um dos maiores jogos já feitos."
   },
   {
@@ -58,7 +58,7 @@ export const games: Game[] = [
     releaseYear: 1997,
     genre: "RPG",
     coverArt: getLibretroImage("Sony_-_PlayStation", "Boxarts", "Final Fantasy VII (USA) (Disc 1)"),
-    fanArt: getLibretroImage("Sony_-_PlayStation", "Titles", "Final Fantasy VII (USA) (Disc 1)"),
+    fanArt: "https://picsum.photos/seed/finalfantasy/1920/1080",
     description: "Junte-se a Cloud Strife e o grupo rebelde AVALANCHE para deter a terrível corporação Shinra."
   },
   {
@@ -69,7 +69,7 @@ export const games: Game[] = [
     releaseYear: 1997,
     genre: "Metroidvania",
     coverArt: getLibretroImage("Sony_-_PlayStation", "Boxarts", "Castlevania - Symphony of the Night (USA)"),
-    fanArt: getLibretroImage("Sony_-_PlayStation", "Titles", "Castlevania - Symphony of the Night (USA)"),
+    fanArt: "https://picsum.photos/seed/castlevania/1920/1080",
     description: "Explore o castelo do Drácula como Alucard, enfrentando monstros e descobrindo todos os segredos."
   },
   {
@@ -80,7 +80,7 @@ export const games: Game[] = [
     releaseYear: 1999,
     genre: "Fighting (2D)",
     coverArt: getLibretroImage("MAME", "Titles", "Street Fighter III 3rd Strike_ Fight for the Future (Japan 990608)"),
-    fanArt: getLibretroImage("MAME", "Snaps", "Street Fighter III 3rd Strike_ Fight for the Future (Japan 990608)"),
+    fanArt: "https://picsum.photos/seed/streetfighter/1920/1080",
     description: "O suprassumo dos jogos de luta 2D. Domine a técnica do Parry (Evo Moment 37) neste clássico da Capcom.",
   },
   {
@@ -91,7 +91,7 @@ export const games: Game[] = [
     releaseYear: 2000,
     genre: "Fighting (2D)",
     coverArt: getLibretroImage("MAME", "Titles", "Marvel Vs. Capcom 2 New Age of Heroes (Export, Korea, Rev A)"),
-    fanArt: getLibretroImage("MAME", "Snaps", "Marvel Vs. Capcom 2 New Age of Heroes (Export, Korea, Rev A)"),
+    fanArt: "https://picsum.photos/seed/marvel/1920/1080",
     description: "I wanna take you for a ride! Combos aéreos infinitos e hyper combos insanos neste gigantesco crossover."
   },
   {
@@ -102,7 +102,7 @@ export const games: Game[] = [
     releaseYear: 1996,
     genre: "Run and Gun",
     coverArt: getLibretroImage("MAME", "Titles", "Metal Slug - Super Vehicle-001"),
-    fanArt: getLibretroImage("MAME", "Snaps", "Metal Slug - Super Vehicle-001"),
+    fanArt: "https://picsum.photos/seed/metalslug/1920/1080",
     description: "O auge da pixel art e ação frenética co-op side-scrolling dos Arcades nos anos 90."
   },
   {
@@ -113,7 +113,7 @@ export const games: Game[] = [
     releaseYear: 1995,
     genre: "Puzzle",
     coverArt: getLibretroImage("MAME", "Titles", "Puzzle Bobble 2 (Japan)"),
-    fanArt: getLibretroImage("MAME", "Snaps", "Puzzle Bobble 2 (Japan)"),
+    fanArt: "https://picsum.photos/seed/bubble/1920/1080",
     description: "Junte bolhas da mesma cor! O mais divertido jogo competitivo de Puzzle dos Arcades originais."
   },
   {
@@ -124,7 +124,7 @@ export const games: Game[] = [
     releaseYear: 2002,
     genre: "Fighting (2D)",
     coverArt: getLibretroImage("MAME", "Titles", "The King of Fighters 2002"),
-    fanArt: getLibretroImage("MAME", "Snaps", "The King of Fighters 2002"),
+    fanArt: "https://picsum.photos/seed/kof/1920/1080",
     description: "A clássica série da SNK num formato dream-match. Uma das melhores jogabilidades competitivas do Neo Geo."
   },
   {
@@ -135,7 +135,7 @@ export const games: Game[] = [
     releaseYear: 2007,
     genre: "Action-Adventure",
     coverArt: getLibretroImage("Sony_-_PlayStation_2", "Boxarts", "God of War II (USA)"),
-    fanArt: getLibretroImage("Sony_-_PlayStation_2", "Titles", "God of War II (USA)"),
+    fanArt: "https://picsum.photos/seed/kratos/1920/1080",
     description: "Kratos desafia os próprios Deuses do Olimpo nesta obra-prima técnica do PS2."
   },
   {
@@ -146,7 +146,7 @@ export const games: Game[] = [
     releaseYear: 2002,
     genre: "First-Person Adventure",
     coverArt: getLibretroImage("Nintendo_-_GameCube", "Boxarts", "Metroid Prime (USA)"),
-    fanArt: getLibretroImage("Nintendo_-_GameCube", "Titles", "Metroid Prime (USA)"),
+    fanArt: "https://picsum.photos/seed/metroid/1920/1080",
     description: "A transição perfeita da Samus para o 3D. Exploração e atmosfera inigualáveis."
   },
   {
@@ -157,7 +157,7 @@ export const games: Game[] = [
     releaseYear: 2017,
     genre: "Platformer",
     coverArt: "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Switch/master/Named_Boxarts/Super%20Mario%20Odyssey%20(World).png",
-    fanArt: "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Switch/master/Named_Titles/Super%20Mario%20Odyssey%20(World).png",
+    fanArt: "https://picsum.photos/seed/odyssey/1920/1080",
     description: "Uma jornada global com Cappy para impedir o casamento de Bowser."
   }
 ];

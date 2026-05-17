@@ -33,7 +33,7 @@ export const TaskMonitor: React.FC = () => {
 
   useEffect(() => {
     // Connect to SSE for task updates
-    const eventSource = new EventSource('/api/download/status');
+    const eventSource = new EventSource('/api/system/download/status');
     
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
