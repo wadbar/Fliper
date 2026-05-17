@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Brain, Cpu, Zap, Activity, Shield, AlertTriangle, CheckCircle2, Terminal, BarChart3, Globe, Database, History, Search, Circle, RefreshCw } from 'lucide-react';
+import { Brain, Cpu, Zap, Activity, Shield, AlertTriangle, CheckCircle2, Terminal, BarChart3, Globe, Database, History, Search, Circle, RefreshCw, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -26,35 +26,88 @@ export const NeuralCoreApp: React.FC = () => {
     const [streaming, setStreaming] = useState(false);
     const [wiping, setWiping] = useState(false);
 
-    // Prompt Resonator State
-    const [rawPrompt, setRawPrompt] = useState('');
-    const [promptType, setPromptType] = useState<'image' | 'analysis' | 'code'>('image');
-    const [refinedData, setRefinedData] = useState<{ refinedPrompt: string, reasoning: string, tips: string[] } | null>(null);
-    const [refining, setRefining] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [apiKey, setApiKey] = useState('');
+    const [temperature, setTemperature] = useState(0.7);
 
-    const resonatePrompt = async () => {
-        if (!rawPrompt.trim() || refining) return;
-        setRefining(true);
-        setLogs(prev => [`[${new Date().toLocaleTimeString()}] RESONANCE: Initiating prompt expansion for ${promptType.toUpperCase()}.`, ...prev].slice(0, 50));
+    // Prompt Resonator State
+    const [promptType, setPromptType] = useState<'image' | 'analysis' | 'code'>('image');
+    const [prompt, setPrompt] = useState('');
+    const [imageSize, setImageSize] = useState({ width: 600, height: 800 });
+    const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+    const [generating, setGenerating] = useState(false);
+
+    const TASK_SUGGESTIONS = {
+        image: ['Photorealistic', 'Cyberpunk', 'Minimalist', '4k', 'Cinematic', 'Abstract', 'Vibrant', 'Dark'],
+        analysis: ['Trend Analysis', 'Feature Breakdown', 'Summarization', 'Structured Output', 'Comparative', 'Anomaly Detection'],
+        code: ['TypeScript React Function', 'Node.js Express Route', 'Data Processing Hook', 'CSS Layout Pattern']
+    };
+
+    const PREDEFINED_TEMPLATES = {
+        image: [
+            { name: 'Fantasy Character', prompt: 'High-detail fantasy portrait of a majestic elven mage wearing intricate, glowing arcane armor, intricate leather textures, dramatic cinematic side-lighting, epic magical swirling energy, ultra-realistic, 8k resolution.' },
+            { name: 'Cyberpunk Cityscape', prompt: 'Futuristic cyberpunk city at night, rain-slicked neon-lit streets, towering skyscrapers with holographic advertisements, bustling crowd, cinematic perspective, highly detailed.' }
+        ],
+        analysis: [
+            { name: 'Data Trend Analysis', prompt: 'Perform a detailed trend analysis on this data set: identify key growth vectors, seasonal patterns, potential outliers, and provide actionable business recommendations based on these findings.' },
+            { name: 'Market Anomaly Detector', prompt: 'Examine these market data points and detect any significant anomalies, comparing them against historical norms and outlining possible root causes.' }
+        ],
+        code: [
+            { name: 'TypeScript Interface Skeleton', prompt: 'Generate a clean, reusable TypeScript interface structure for a complex data model entity, including optional fields and documented properties.' },
+            { name: 'Fast Async API Handler', prompt: 'Write a robust, production-grade asynchronous Node.js Express API route handler with proper error catching, validation, and status code management.' }
+        ]
+    };
+
+    const addSuggestion = (suggestion: string) => {
+        setPrompt(prev => prev ? `${prev}, ${suggestion}` : suggestion);
+    };
+
+    const generateSignal = async () => {
+        if (!prompt.trim() || generating) return;
+        setGenerating(true);
+        if (promptType === 'image') setGeneratedImageUrl(null);
+        
+        const timestamp = new Date().toLocaleTimeString();
+        setLogs(prev => [`[${timestamp}] INFO: Initiating ${promptType} signal.`, ...prev].slice(0, 50));
         
         try {
-            const res = await fetch('/api/ai/refine-prompt', {
+            const endpoint = promptType === 'image' ? '/api/ai/image' : '/api/ai/analyze';
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rawPrompt, category: promptType })
+                body: JSON.stringify({ 
+                    prompt, 
+                    ...(promptType === 'image' ? imageSize : {})
+                })
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                setRefinedData(data);
-                setLogs(prev => [`[${new Date().toLocaleTimeString()}] RESONANCE: Signal refined and stabilized.`, ...prev].slice(0, 50));
-            } else {
-                throw new Error("RESONANCE_FAILURE");
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`FAILURE_${response.status}:${errorText}`);
             }
+
+            const data = await response.json();
+            
+            if (promptType === 'image') {
+                if (!data.url) throw new Error("PAYLOAD_INVALID");
+                setGeneratedImageUrl(data.url);
+            } else {
+                setLogs(prev => [`[${new Date().toLocaleTimeString()}] INFO: Analysis complete.`, ...prev].slice(0, 50));
+            }
+            
+            setLogs(prev => [`[${new Date().toLocaleTimeString()}] INFO: ${promptType} signal stabilized and rendered.`, ...prev].slice(0, 50));
+            
         } catch (e: any) {
-            setLogs(prev => [`[${new Date().toLocaleTimeString()}] FATAL: Neural resonance collapsed.`, ...prev].slice(0, 50));
+            const errTimestamp = new Date().toLocaleTimeString();
+            console.error(`[${errTimestamp}] FATAL ${promptType.toUpperCase()}:`, e);
+            
+            setLogs(prev => [
+                `[${errTimestamp}] FATAL: ${promptType} failed.`,
+                `[${errTimestamp}] DIAGNOSTIC: ${e.message}`,
+                ...prev
+            ].slice(0, 50));
         } finally {
-            setRefining(false);
+            setGenerating(false);
         }
     };
 
@@ -262,6 +315,13 @@ export const NeuralCoreApp: React.FC = () => {
                     </div>
                 </div>
                     <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSettingsOpen(true)}
+                        className="p-1.5 bg-zinc-800/80 border border-zinc-700/50 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95"
+                        title="Configurações"
+                    >
+                        <Settings size={14} />
+                    </button>
                     <button 
                         onClick={wipeNeuralStats}
                         disabled={wiping}
@@ -530,113 +590,150 @@ export const NeuralCoreApp: React.FC = () => {
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2" />
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/20">
-                                            <Zap size={20} className="text-purple-400" />
+                                        <div className="p-2 bg-fuchsia-500/20 rounded-lg border border-fuchsia-500/20">
+                                            <Zap size={20} className="text-fuchsia-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Neural Prompt Resonator</h3>
-                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Architectural Signal Expansion</p>
+                                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Neural Image Synthesizer</h3>
+                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Architectural Visualization</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-1 p-1 bg-black/40 rounded-lg border border-zinc-800">
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                                    <div className="flex gap-1 p-1 bg-black/40 rounded-lg border border-zinc-800 mb-4 overflow-x-auto pb-1 custom-scrollbar">
                                         {(['image', 'analysis', 'code'] as const).map((type) => (
                                             <button
                                                 key={type}
                                                 onClick={() => setPromptType(type)}
-                                                className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all ${promptType === type ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-zinc-600 hover:text-zinc-400'}`}
+                                                className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all whitespace-nowrap ${promptType === type ? 'bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30' : 'text-zinc-600 hover:text-zinc-400'}`}
                                             >
                                                 {type}
                                             </button>
                                         ))}
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                                     <div className="space-y-4">
                                         <div className="relative">
                                             <textarea 
-                                                value={rawPrompt}
-                                                onChange={(e) => setRawPrompt(e.target.value)}
-                                                placeholder="Inject raw neural seed idea here..."
-                                                className="w-full h-32 bg-black/40 border border-zinc-800 rounded-xl p-4 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-purple-500/50 transition-all resize-none custom-scrollbar"
+                                                value={prompt}
+                                                onChange={(e) => setPrompt(e.target.value)}
+                                                placeholder="Inject raw neural seed concept here..."
+                                                className="w-full h-32 bg-black/40 border border-zinc-800 rounded-xl p-4 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-fuchsia-500/50 transition-all resize-none custom-scrollbar"
                                             />
-                                            <div className="absolute bottom-3 right-3">
-                                                <button 
-                                                    onClick={resonatePrompt}
-                                                    disabled={refining || !rawPrompt.trim()}
-                                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] disabled:opacity-50 disabled:grayscale flex items-center gap-2"
+                                            <button 
+                                                onClick={async () => {
+                                                    setGenerating(true);
+                                                    try {
+                                                        const response = await fetch('/api/ai/refine-prompt', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ rawPrompt: prompt, category: promptType })
+                                                        });
+                                                        if (!response.ok) throw new Error("Failed to refine");
+                                                        const data = await response.json();
+                                                        setPrompt(data.refinedPrompt || data);
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    } finally {
+                                                        setGenerating(false);
+                                                    }
+                                                }}
+                                                className="absolute top-2 right-2 p-2 bg-fuchsia-900/50 hover:bg-fuchsia-800 text-fuchsia-200 rounded-lg transition-colors"
+                title="Refine Prompt"
+                                            >
+                                                <Brain size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {TASK_SUGGESTIONS[promptType].map(suggestion => (
+                                                <button
+                                                    key={suggestion}
+                                                    onClick={() => addSuggestion(suggestion)}
+                                                    className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-[9px] font-bold text-zinc-400 rounded-md transition-colors"
                                                 >
-                                                    {refining ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                                                    Resonate
+                                                    + {suggestion}
                                                 </button>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 border-t border-zinc-800 pt-4">
+                                            <h4 className="text-[10px] uppercase font-black text-zinc-600 mb-2">Pre-defined Templates</h4>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {PREDEFINED_TEMPLATES[promptType].map(template => (
+                                                    <button
+                                                        key={template.name}
+                                                        onClick={() => setPrompt(template.prompt)}
+                                                        className="text-left px-3 py-2 bg-zinc-800/50 hover:bg-zinc-700/50 text-[10px] font-bold text-zinc-400 rounded-md transition-colors"
+                                                        title={template.prompt}
+                                                    >
+                                                        {template.name}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 px-1">
-                                            <Circle size={8} className="text-zinc-700" fill="currentColor" />
-                                            <span className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest leading-none">Ready for interference</span>
+                                        <div className="flex items-center gap-2">
+                                            {promptType === 'image' && (
+                                                <>
+                                                    <input 
+                                                        type="number" 
+                                                        value={imageSize.width} 
+                                                        onChange={(e) => setImageSize({...imageSize, width: parseInt(e.target.value)})}
+                                                        className="w-20 bg-black/40 border border-zinc-800 rounded p-2 text-xs text-white"
+                                                    />
+                                                    <span className="text-zinc-500">x</span>
+                                                    <input 
+                                                        type="number" 
+                                                        value={imageSize.height} 
+                                                        onChange={(e) => setImageSize({...imageSize, height: parseInt(e.target.value)})}
+                                                        className="w-20 bg-black/40 border border-zinc-800 rounded p-2 text-xs text-white"
+                                                    />
+                                                </>
+                                            )}
+                                            <button 
+                                                onClick={generateSignal}
+                                                disabled={generating || !prompt.trim()}
+                                                className="flex-1 px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(217,70,239,0.3)] disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2"
+                                            >
+                                                {generating ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+                                                Synthesize
+                                            </button>
                                         </div>
                                     </div>
 
-                                    <div className="bg-black/60 border border-zinc-800/80 rounded-xl p-4 min-h-[128px] relative group/output">
+                                    <div className="bg-black/60 border border-zinc-800/80 rounded-xl p-4 min-h-[192px] relative group/output">
                                         <AnimatePresence mode="wait">
-                                            {refinedData ? (
+                                            {generatedImageUrl ? (
                                                 <motion.div 
                                                     key="output"
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
-                                                    className="space-y-4"
+                                                    className="relative"
                                                 >
-                                                    <div>
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Refined Signal</span>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    navigator.clipboard.writeText(refinedData.refinedPrompt);
-                                                                    setLogs(prev => [`[${new Date().toLocaleTimeString()}] UI: Refined prompt copied to clipboard.`, ...prev].slice(0, 50));
-                                                                }}
-                                                                className="text-[8px] font-black text-zinc-500 hover:text-white uppercase transition-colors"
-                                                            >
-                                                                Copy Signal
-                                                            </button>
-                                                        </div>
-                                                        <p className="text-[12px] font-mono text-zinc-300 leading-relaxed italic">
-                                                            "{refinedData.refinedPrompt}"
-                                                        </p>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800/50">
-                                                        <div>
-                                                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 block">Architecture</span>
-                                                            <p className="text-[10px] text-zinc-400 leading-tight">{refinedData.reasoning}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 block">Optimization</span>
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {refinedData.tips.map((t, i) => (
-                                                                    <span key={i} className="px-1.5 py-0.5 bg-zinc-800 text-[8px] text-zinc-500 rounded uppercase font-bold">{t}</span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    <img 
+                                                        src={generatedImageUrl} 
+                                                        alt="Generated" 
+                                                        className="w-full h-48 object-cover rounded-lg"
+                                                        referrerPolicy="no-referrer"
+                                                    />
                                                 </motion.div>
                                             ) : (
                                                 <div key="placeholder" className="h-full flex flex-col items-center justify-center text-center opacity-30">
                                                     <Brain size={32} className="text-zinc-700 mb-2" />
-                                                    <p className="text-[10px] font-black text-zinc-600 uppercase">Awaiting Neural Resonance</p>
+                                                    <p className="text-[10px] font-black text-zinc-600 uppercase">Awaiting Neural Synthesizer</p>
                                                 </div>
                                             )}
                                         </AnimatePresence>
                                         
-                                        {refining && (
+                                        {generating && (
                                             <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-20 flex items-center justify-center rounded-xl">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
                                                         <motion.div 
                                                             animate={{ x: [-48, 48] }}
                                                             transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                                            className="w-full h-full bg-purple-500 shadow-[0_0_10px_#a855f7]"
+                                                            className="w-full h-full bg-fuchsia-500 shadow-[0_0_10px_#d946ef]"
                                                         />
                                                     </div>
-                                                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-[0.3em] animate-pulse">Expanding Signal...</span>
+                                                    <span className="text-[9px] font-black text-fuchsia-400 uppercase tracking-[0.3em] animate-pulse">Synthesizing...</span>
                                                 </div>
                                             </div>
                                         )}
@@ -814,6 +911,50 @@ export const NeuralCoreApp: React.FC = () => {
                     AUTO_HEALING_PROTOCOLS: VERIFIED
                 </div>
             </div>
+            {settingsOpen && (
+                <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-6">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md p-6"
+                    >
+                        <h3 className="text-lg font-black text-white uppercase mb-6 flex items-center justify-between">
+                            Neural Config
+                            <button onClick={() => setSettingsOpen(false)} className="text-zinc-500 hover:text-white">✕</button>
+                        </h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] text-zinc-500 uppercase font-black">API Key</label>
+                                <input 
+                                    type="password"
+                                    value={apiKey}
+                                    onChange={(e) => setApiKey(e.target.value)}
+                                    placeholder="sk-..."
+                                    className="w-full bg-black/40 border border-zinc-800 rounded-lg p-3 text-sm text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-zinc-500 uppercase font-black">Temperature: {temperature}</label>
+                                <input 
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.1"
+                                    value={temperature}
+                                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+                            <button 
+                                onClick={() => setSettingsOpen(false)}
+                                className="w-full py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[10px] font-black uppercase rounded-lg transition-all"
+                            >
+                                Persist Settings
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 };

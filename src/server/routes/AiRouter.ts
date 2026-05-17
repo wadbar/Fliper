@@ -183,13 +183,17 @@ router.post("/wipe", async (req, res) => {
 router.post("/refine-prompt", async (req, res) => {
     try {
         const { rawPrompt, category } = req.body;
+        
+        // Defensive validation
+        if (!rawPrompt || typeof rawPrompt !== 'string') {
+            return res.status(400).json({ error: "INVALID_PROMPT_INPUT" });
+        }
+
         // @ts-ignore
         const { generate } = await import("../../services/aiEngine.mjs");
         
-        const systemInstruction = `You are a Prompt Engineering Expert. 
-        Refine the user's raw idea into a high-quality, effective prompt optimized for the specified category.
-        
-        Category: ${category}
+        const systemInstruction = `You are an expert assistant for prompt refinement. 
+        Refine the user's input into a high-quality, effective prompt optimized for the specified category: ${category}.
         
         Guidelines:
         - Image Generation: Focus on style, lighting, composition, and descriptive details.
@@ -204,19 +208,21 @@ router.post("/refine-prompt", async (req, res) => {
         }`;
         
         const result = await generate({ 
-            prompt: `Raw Seed: ${rawPrompt}`, 
+            prompt: `Raw Input: ${rawPrompt}`, 
             systemInstruction, 
             responseType: 'json', 
             temperature: 0.7 
         });
 
-        if (result.success) {
+        if (result.success && result.content) {
             res.json(result.content);
         } else {
-            res.status(500).json({ error: "PROMPT_RESONANCE_FAILURE" });
+            console.error(`[AI_ROUTE_FAULT] Refinement failed for category: ${category}`);
+            res.status(500).json({ error: "PROCESSING_FAULT", details: result.content || "Unknown error" });
         }
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        console.error(`[AI_ROUTE_EXCEPTION]`, e);
+        res.status(500).json({ error: "INTERNAL_FAULT", message: e.message });
     }
 });
 

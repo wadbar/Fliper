@@ -45,17 +45,9 @@ export async function invokeGemini({ prompt, system, temperature, model, apiKey,
                 const isDailyQuota = /GenerateRequestsPerDay/i.test(errText);
                 const quarantineMs = isDailyQuota ? 3600000 : (retryAfterMs || 60000);
                 
-                // Signal early quarantine
+                // Force Circuit Breaker OPEN to block further requests during quarantine
                 quarantineNode('gemini', quarantineMs);
 
-                if (!isDailyQuota && attempt < maxRetries) {
-                    const delay = retryAfterMs || Math.pow(2, attempt + 2) * 1000;
-                    logger.warn(`[GEMINI] Quota Exceeded (429). Retrying in ${delay}ms...`, { attempt: attempt + 1 });
-                    await new Promise(r => setTimeout(r, delay));
-                    attempt++;
-                    continue;
-                }
-                
                 // If daily quota or exhausted retries, throw immediately
                 throw new Error(`[Google API Error] 429 Too Many Requests: ${errText} QUARANTINE_MS:${quarantineMs}`);
             }
