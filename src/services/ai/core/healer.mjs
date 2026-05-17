@@ -67,14 +67,17 @@ export function healJson(str) {
         if (inString) result += '"';
         while (stack.length > 0) result += stack.pop();
 
-        // Key Fixes (ensure "key": value)
-        let binaryFix = result.replace(/:\s*([^"\{\[0-9tfn][^,}\]]+)/g, (match, val) => {
-            const t = val.trim();
-            if (t.endsWith('}') || t.endsWith(']')) return match;
-            return `: "${t.replace(/"/g, '\\"')}"`;
-        });
+        // Key Fixes: Replace unquoted keys and fix trailing commas
+        let binaryFix = result
+            .replace(/,\s*([}\]])/g, '$1') // Fix trailing commas
+            .replace(/([{,]\s*)([a-zA-Z0-9_\u0080-\uffff]+)(\s*:)/g, '$1"$2"$3') // Quote unquoted keys (including unicode)
+            .replace(/:\s*'([^']*)'/g, ': "$1"'); // Convert single quotes to double quotes for values
 
         try { return JSON.parse(binaryFix); } catch (e) {
+            // Attempt to close open strings/quotes if JSON.parse still fails
+            if (binaryFix.split('"').length % 2 === 0) {
+                 binaryFix += '"';
+            }
             const extraction = binaryFix.match(/\{.*\}/s) || binaryFix.match(/\[.*\]/s);
             if (extraction) return JSON.parse(extraction[0]);
             return null;

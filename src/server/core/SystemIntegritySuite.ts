@@ -57,8 +57,7 @@ export class SystemIntegritySuite {
     private static async testAIEngine(): Promise<TestResult> {
         const start = Date.now();
         try {
-            // @ts-expect-error - ESM dynamic import
-            const { generate } = await import("../../services/aiEngine.mjs");
+            const { generate, getEngineStats } = await import("../../services/aiEngine.mjs");
             
             const res = await generate({ 
                 prompt: "perform integrity handshake",
@@ -66,11 +65,17 @@ export class SystemIntegritySuite {
                 temperature: 0.1
             });
             
+            const stats = getEngineStats();
+            const geminiBreaker = stats.breakers.gemini;
+            const errorSuffix = geminiBreaker.errorCode ? ` (Last Error: ${geminiBreaker.errorCode})` : "";
+            
             return {
                 component: "Neural Core (Resilient)",
-                passed: res.success,
+                passed: res.success && res.provider !== 'heuristic',
                 latency: Date.now() - start,
-                message: res.success ? `Provider: ${res.provider} (Active)` : "Neural Collapse"
+                message: res.success && res.provider !== 'heuristic' 
+                    ? `Provider: ${res.provider} (Active)` 
+                    : `Neural Collapse: Fell back to ${res.provider}${errorSuffix}`
             };
         } catch (e: any) {
             return { component: "Neural Core (Resilient)", passed: false, latency: Date.now() - start, message: e.message };

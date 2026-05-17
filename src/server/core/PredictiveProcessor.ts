@@ -22,7 +22,6 @@ export class PredictiveProcessor {
       try {
           logger.debug(`Predictive: Pre-fetching metadata for [${title}]`);
           
-          // @ts-expect-error - Dynamic import of ESM in TS Node context
           const { generate } = await import("../../services/aiEngine.mjs");
           
           const systemInstruction = `You are a Retro Gaming Expert and Data Scientist. 

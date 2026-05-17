@@ -126,6 +126,7 @@ router.get("/download/status", (req, res) => {
 router.post("/download", (req, res) => {
     try {
         const { type, name } = req.body;
+        const sanitize = (val: any) => String(val).replace(/[^a-zA-Z0-9.\-_]/g, '');
         const task = queueManager.addTask(sanitize(type), sanitize(name));
         res.json({ status: "ok", task });
     } catch (err: any) {

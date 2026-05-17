@@ -31,11 +31,18 @@ function maskSensitiveData(str) {
         .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[MASKED_DATA]');
 }
 
+import { logger as globalLogger } from "../server/core/Logger";
+
 const logger = {
     _log: (tag, color, msg, metadata = null) => {
         const ts = new Date().toISOString().replace('T', ' ').substring(0, 19);
         const metaStr = metadata ? ` \x1b[90m| ${JSON.stringify(metadata)}\x1b[0m` : '';
         console.log(`${color}[AI-MASTER:${tag}]\x1b[0m [${ts}] ${msg}${metaStr}`);
+        
+        // Also send to global logger if available
+        if (tag === 'WARN') globalLogger.warn(`[AI-MASTER] ${msg}`, metadata);
+        else if (tag === 'FAIL') globalLogger.error(`[AI-MASTER] ${msg}`, metadata);
+        else if (tag === 'INFO') globalLogger.info(`[AI-MASTER] ${msg}`, metadata);
     },
     info: (msg, meta) => logger._log('INFO', '\x1b[34m', msg, meta),
     success: (msg, meta) => logger._log('OK', '\x1b[32m', msg, meta),
@@ -46,14 +53,31 @@ const logger = {
 function isRetriable(errorMsg) {
     if (!errorMsg) return false;
     const msg = errorMsg.toLowerCase();
+    
+    // Explicit non-retriable auth/quota fatal errors
+    if (msg.includes('auth_fatal')) return false;
+    if (msg.includes('api key invalid')) return false;
+    if (msg.includes('generaterequestperday')) return false; // Daily quota exhausted
+    
     const codes = ['429', 'timeout', 'deadline', '502', '503', '504', 'abort'];
     if (codes.some(p => msg.includes(p))) return true;
     if (msg.includes('fetch failed') || msg.includes('econn')) return true;
+    
     return false;
 }
 
-function shouldSkipNode(id) {
+function shouldSkipNode(id, allowHibernated = false) {
     const breaker = circuitBreakers[id];
+    
+    // Priority handling
+    if (breaker.priority === 'OFF') return true;
+    if (breaker.priority === 'HIBERNATED' && !allowHibernated) return true;
+
+    // Quarantine handling (429s)
+    if (breaker.quarantinedUntil && breaker.quarantinedUntil > Date.now()) {
+        return true;
+    }
+
     if (breaker.status === 'OPEN') {
         const cooldown = Date.now() - breaker.lastFailure;
         const resetInterval = CONFIG.inference.breakerResetTime * Math.pow(2, Math.min(5, breaker.failures - CONFIG.inference.breakerThreshold));
@@ -99,7 +123,11 @@ export async function generate({ prompt, systemInstruction = '', responseType = 
         { id: 'nvidia', fn: invokeNvidia, config: { apiKey: process.env.NVIDIA_API_KEY?.trim(), model: process.env.NVIDIA_MODEL, baseUrl: process.env.NVIDIA_BASE_URL } }
     ].filter(n => {
         if (n.id === 'ollama') return !!n.config.host && !n.config.host.includes('undefined');
-        return !!n.config.apiKey && !n.config.apiKey.includes('your_');
+        const hasKey = !!n.config.apiKey && !n.config.apiKey.includes('your_') && n.config.apiKey !== 'undefined';
+        if (!hasKey && n.id === 'gemini') {
+            console.warn(`[AI-ENGINE] Gemini key missing or invalid: ${n.config.apiKey?.substring(0, 5)}...`);
+        }
+        return hasKey;
     });
 
     const isHeavy = prompt.length > 1500 || responseType === 'json';
@@ -123,21 +151,28 @@ export async function generate({ prompt, systemInstruction = '', responseType = 
             results.provider = node.id;
             results.success = true;
             
+            // Register selection for anti-flapping
+            circuitBreakers[node.id].lastSelected = Date.now();
+            
             const tokens = Math.ceil((raw?.length || 0) / 4);
             recordNodeSuccess(node.id, Date.now() - startTime, tokens, CONFIG.pricing[node.id]?.output || 0);
             return finalize(results, startTime, cacheKey);
         } catch (err) {
             recordNodeFailure(node.id, err.message);
             trackError(node.id, err.message);
-            logger.warn(`RELAY: Node ${node.id.toUpperCase()} failed.`, { error: err.message });
-            if (!isRetriable(err.message)) break; // stop on non-retriable auth errors
+            
+            // Log concise error if it's a known large quota blob
+            const logMsg = err.message.length > 500 ? err.message.substring(0, 500) + '... [TRUNCATED]' : err.message;
+            logger.warn(`RELAY: Node ${node.id.toUpperCase()} failed.`, { error: logMsg });
+            
+            if (!isRetriable(err.message)) break; // stop on non-retriable auth/quota errors
         }
     }
 
     // Tertiary Optimized Fallback
     const tertiaryId = selectOptimalNode(nodes.map(n => n.id), CONFIG);
     const tNode = nodes.find(n => n.id === tertiaryId);
-    if (tNode && !shouldSkipNode(tNode.id)) {
+    if (tNode && !shouldSkipNode(tNode.id, true)) {
         try {
             const raw = await tNode.fn({ 
                 prompt: maskSensitiveData(augmentedPrompt), 
@@ -150,6 +185,7 @@ export async function generate({ prompt, systemInstruction = '', responseType = 
             results.content = sanitizeResponse(raw, responseType);
             results.provider = tNode.id;
             results.success = true;
+            circuitBreakers[tNode.id].lastSelected = Date.now();
             recordNodeSuccess(tNode.id, Date.now() - startTime);
             return finalize(results, startTime, cacheKey);
         } catch (err) {
@@ -201,4 +237,25 @@ export function setPriority(provider, priority) {
         return true;
     }
     return false;
+}
+
+export function wipeStats() {
+    engineStats.totalCalls = 0;
+    engineStats.successByProvider = { ollama: 0, gemini: 0, nvidia: 0, heuristic: 0 };
+    engineStats.failuresByProvider = { ollama: 0, gemini: 0, nvidia: 0 };
+    engineStats.totalCostUSD = 0;
+    engineStats.totalTokensEst = 0;
+    engineStats.errorTypes = {};
+    engineStats.lastError = null;
+    
+    // Reset breakers but preserve priorities
+    Object.keys(circuitBreakers).forEach(key => {
+        circuitBreakers[key].status = 'CLOSED';
+        circuitBreakers[key].failures = 0;
+        circuitBreakers[key].lastFailure = 0;
+        circuitBreakers[key].errorCode = null;
+        circuitBreakers[key].quarantinedUntil = 0;
+    });
+    
+    return true;
 }

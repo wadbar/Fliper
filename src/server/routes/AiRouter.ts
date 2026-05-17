@@ -169,4 +169,82 @@ router.post("/priority", async (req, res) => {
     }
 });
 
+router.post("/wipe", async (req, res) => {
+    try {
+        // @ts-ignore
+        const { wipeStats } = await import("../../services/aiEngine.mjs");
+        wipeStats();
+        res.json({ status: "ok" });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post("/refine-prompt", async (req, res) => {
+    try {
+        const { rawPrompt, category } = req.body;
+        // @ts-ignore
+        const { generate } = await import("../../services/aiEngine.mjs");
+        
+        const systemInstruction = `You are a Prompt Engineering Expert. 
+        Refine the user's raw idea into a high-quality, effective prompt optimized for the specified category.
+        
+        Category: ${category}
+        
+        Guidelines:
+        - Image Generation: Focus on style, lighting, composition, and descriptive details.
+        - Data Analysis: Focus on objectives, variables, constraints, and step-by-step logic.
+        - Code Generation: Focus on language, libraries, functionality, and edge cases.
+        
+        Output MUST be in JSON format:
+        {
+          "refinedPrompt": "The expanded and optimized version of the prompt.",
+          "reasoning": "Briefly explain 2-3 key improvements made to the original idea.",
+          "tips": ["Tip 1", "Tip 2"]
+        }`;
+        
+        const result = await generate({ 
+            prompt: `Raw Seed: ${rawPrompt}`, 
+            systemInstruction, 
+            responseType: 'json', 
+            temperature: 0.7 
+        });
+
+        if (result.success) {
+            res.json(result.content);
+        } else {
+            res.status(500).json({ error: "PROMPT_RESONANCE_FAILURE" });
+        }
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.get("/telemetry", (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendUpdate = async () => {
+        try {
+            // @ts-ignore
+            const { getEngineStats } = await import("../../services/aiEngine.mjs");
+            const stats = getEngineStats();
+            res.write(`data: ${JSON.stringify(stats)}\n\n`);
+        } catch (e) {
+            // Silent fail on background tick
+        }
+    };
+
+    // Initial push
+    sendUpdate();
+
+    const interval = setInterval(sendUpdate, 3000); // 3 second resolution for UI
+
+    req.on('close', () => {
+        clearInterval(interval);
+    });
+});
+
 export { router as AiRouter };

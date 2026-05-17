@@ -75,6 +75,7 @@ class TelemetryLogger extends EventEmitter {
 
     public debug(msg: string, meta?: any) { this.write(LogLevel.DEBUG, msg, meta); }
     public info(msg: string, meta?: any) { this.write(LogLevel.INFO, msg, meta); }
+    public success(msg: string, meta?: any) { this.write(LogLevel.INFO, `[SUCCESS] ${msg}`, { ...meta, success: true }); }
     public warn(msg: string, meta?: any) { 
         this.write(LogLevel.WARN, msg, meta instanceof Error ? { message: meta.message, stack: meta.stack } : meta); 
     }

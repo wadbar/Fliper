@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Brain, Cpu, Zap, Activity, Shield, AlertTriangle, CheckCircle2, Terminal, BarChart3, Globe, Database, History, Search, Circle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Brain, Cpu, Zap, Activity, Shield, AlertTriangle, CheckCircle2, Terminal, BarChart3, Globe, Database, History, Search, Circle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -14,7 +14,7 @@ interface AIStats {
     totalTokensEst: number;
     memoryCount: number;
     cacheSize: number;
-    breakers: Record<string, { status: string, failures: number, priority: 'HIGH' | 'HIBERNATED' | 'OFF', avgLatency: number }>;
+    breakers: Record<string, { status: string, failures: number, priority: 'HIGH' | 'HIBERNATED' | 'OFF', avgLatency: number, errorCode?: string, quarantinedUntil?: number }>;
 }
 
 export const NeuralCoreApp: React.FC = () => {
@@ -22,42 +22,127 @@ export const NeuralCoreApp: React.FC = () => {
     const [history, setHistory] = useState<{ time: string, latency: number }[]>([]);
     const [logs, setLogs] = useState<string[]>([]);
     const [updating, setUpdating] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
+    const [streaming, setStreaming] = useState(false);
+    const [wiping, setWiping] = useState(false);
 
-    const fetchStats = async () => {
+    // Prompt Resonator State
+    const [rawPrompt, setRawPrompt] = useState('');
+    const [promptType, setPromptType] = useState<'image' | 'analysis' | 'code'>('image');
+    const [refinedData, setRefinedData] = useState<{ refinedPrompt: string, reasoning: string, tips: string[] } | null>(null);
+    const [refining, setRefining] = useState(false);
+
+    const resonatePrompt = async () => {
+        if (!rawPrompt.trim() || refining) return;
+        setRefining(true);
+        setLogs(prev => [`[${new Date().toLocaleTimeString()}] RESONANCE: Initiating prompt expansion for ${promptType.toUpperCase()}.`, ...prev].slice(0, 50));
+        
+        try {
+            const res = await fetch('/api/ai/refine-prompt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rawPrompt, category: promptType })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setRefinedData(data);
+                setLogs(prev => [`[${new Date().toLocaleTimeString()}] RESONANCE: Signal refined and stabilized.`, ...prev].slice(0, 50));
+            } else {
+                throw new Error("RESONANCE_FAILURE");
+            }
+        } catch (e: any) {
+            setLogs(prev => [`[${new Date().toLocaleTimeString()}] FATAL: Neural resonance collapsed.`, ...prev].slice(0, 50));
+        } finally {
+            setRefining(false);
+        }
+    };
+
+    const updateTelemetryState = useCallback((data: AIStats) => {
+        setStats(prevStats => {
+            // Immutable comparison to avoid unnecessary updates
+            if (JSON.stringify(prevStats) === JSON.stringify(data)) return prevStats;
+            
+            // Log circuit breaker trips and stabilization
+            if (data.breakers) {
+                Object.entries(data.breakers).forEach(([p, b]: [any, any]) => {
+                    const prevStatus = prevStats?.breakers?.[p]?.status;
+                    if (b.status === 'OPEN' && prevStatus !== 'OPEN') {
+                        const alert = `[${new Date().toLocaleTimeString()}] ALERT: Circuit OPEN for ${p.toUpperCase()} (Critical Failures)`;
+                        setLogs(prev => [alert, ...prev].slice(0, 50));
+                    } else if (b.status === 'CLOSED' && prevStatus === 'OPEN') {
+                        const stabilization = `[${new Date().toLocaleTimeString()}] STABILIZED: Circuit CLOSED for ${p.toUpperCase()}`;
+                        setLogs(prev => [stabilization, ...prev].slice(0, 50));
+                    }
+                });
+            }
+
+            // Log successful calls
+            if (data.totalCalls > (prevStats?.totalCalls || 0)) {
+                const providers = ['ollama', 'gemini', 'nvidia'];
+                const used = providers.find(p => 
+                    // @ts-ignore
+                    data.successByProvider[p] > (prevStats?.successByProvider?.[p] || 0)
+                );
+                
+                if (used) {
+                    const log = `[${new Date().toLocaleTimeString()}] CALL ${data.totalCalls}: Transmitted via ${used.toUpperCase()}`;
+                    setLogs(prev => [log, ...prev].slice(0, 50));
+                }
+            }
+
+            return data;
+        });
+        
+        setHistory(prev => {
+            const lastLatency = data.lastLatency || 0;
+            if (prev.length > 0 && prev[prev.length - 1].latency === lastLatency && prev[prev.length - 1].time === new Date().toLocaleTimeString().split(' ')[0]) {
+                return prev;
+            }
+            const newEntry = { time: new Date().toLocaleTimeString().split(' ')[0], latency: lastLatency };
+            const nextHistory = [...prev, newEntry].slice(-30);
+            return nextHistory;
+        });
+    }, []);
+
+    const fetchStats = useCallback(async () => {
+        if (refreshing) return;
+        setRefreshing(true);
         try {
             const res = await fetch('/api/ai/stats');
             if (res.ok) {
                 const data = await res.json();
-                setStats(data);
-                
-                setHistory(prev => {
-                    const newEntry = { time: new Date().toLocaleTimeString(), latency: data.lastLatency };
-                    const nextHistory = [...prev, newEntry].slice(-30);
-                    return nextHistory;
-                });
-
-                if (data.totalCalls > (stats?.totalCalls || 0)) {
-                    const provider = data.successByProvider.ollama > (stats?.successByProvider.ollama || 0) ? 'OLLAMA' :
-                                   data.successByProvider.gemini > (stats?.successByProvider.gemini || 0) ? 'GEMINI' :
-                                   data.successByProvider.nvidia > (stats?.successByProvider.nvidia || 0) ? 'NVIDIA' : 'NONE';
-                    
-                    if (provider !== 'NONE') {
-                        const log = `[${new Date().toLocaleTimeString()}] CALL ${data.totalCalls}: Transmitted via ${provider}`;
-                        setLogs(prev => [log, ...prev].slice(0, 50));
-                    }
-
-                    // Log circuit breaker trips
-                    if (data.breakers) {
-                        Object.entries(data.breakers).forEach(([p, b]: [any, any]) => {
-                            if (b.status === 'OPEN' && stats?.breakers?.[p]?.status !== 'OPEN') {
-                                setLogs(prev => [`[${new Date().toLocaleTimeString()}] ALERT: Circuit OPEN for ${p.toUpperCase()} (Critical Failures)`, ...prev].slice(0, 50));
-                            }
-                        });
-                    }
-                }
+                updateTelemetryState(data);
             }
         } catch (e) {
             console.error("STATS_FETCH_FAILED");
+        } finally {
+            setRefreshing(false);
+        }
+    }, [updateTelemetryState, refreshing]);
+
+    const handleManualRefresh = async () => {
+        setRefreshing(true);
+        await fetchStats();
+        // Artificial delay for visual feedback if it finishes too fast
+        setTimeout(() => setRefreshing(false), 600);
+        setLogs(prev => [`[${new Date().toLocaleTimeString()}] COMMAND: Manual telemetry sync initiated.`, ...prev].slice(0, 50));
+    };
+
+    const wipeNeuralStats = async () => {
+        if (!window.confirm("CRITICAL: Wipe all neural telemetry and reset circuit breakers?")) return;
+        setWiping(true);
+        try {
+            const res = await fetch('/api/ai/wipe', { method: 'POST' });
+            if (res.ok) {
+                setLogs(prev => [`[${new Date().toLocaleTimeString()}] MAINTENANCE: Neural telemetry purged. CIRCUITS_RESET.`, ...prev].slice(0, 50));
+                setHistory([]);
+                fetchStats();
+            }
+        } catch (e) {
+            console.error("WIPE_FAILED");
+        } finally {
+            setWiping(false);
         }
     };
 
@@ -81,10 +166,37 @@ export const NeuralCoreApp: React.FC = () => {
     };
 
     useEffect(() => {
-        const interval = setInterval(fetchStats, 3000);
-        fetchStats(); // Initial
+        // Initial Fetch
+        fetchStats(); 
 
-        // Stream real-time logs
+        // SSE Telemetry Stream
+        const telemetrySource = new EventSource('/api/ai/telemetry');
+        telemetrySource.onopen = () => {
+            setStreaming(true);
+            setLogs(prev => [`[${new Date().toLocaleTimeString()}] LINK: Neural telemetry stream established.`, ...prev].slice(0, 50));
+        };
+        
+        telemetrySource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                updateTelemetryState(data);
+            } catch (err) {
+                console.error("TELEMETRY_PARSE_ERROR");
+            }
+        };
+
+        telemetrySource.onerror = () => {
+            setStreaming(false);
+        };
+
+        // Fallback polling (less frequent)
+        const fallbackInterval = setInterval(() => {
+            if (!telemetrySource || telemetrySource.readyState !== 1) {
+                fetchStats();
+            }
+        }, 10000);
+
+        // System Logs Stream
         const eventSource = new EventSource('/api/system/logs/stream');
         eventSource.onmessage = (event) => {
             try {
@@ -97,8 +209,9 @@ export const NeuralCoreApp: React.FC = () => {
         };
 
         return () => {
-            clearInterval(interval);
+            telemetrySource.close();
             eventSource.close();
+            clearInterval(fallbackInterval);
         };
     }, []); // Only once on mount
 
@@ -148,7 +261,29 @@ export const NeuralCoreApp: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                    <div className="flex gap-2">
+                    <button 
+                        onClick={wipeNeuralStats}
+                        disabled={wiping}
+                        className={`p-1.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-500 hover:bg-rose-500/20 transition-all disabled:opacity-30`}
+                        title="Purge Telemetry (Hard Reset)"
+                    >
+                        <Shield size={14} className={wiping ? 'animate-pulse' : ''} />
+                    </button>
+                        {streaming && (
+                            <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-500 text-[10px] font-black uppercase flex items-center gap-2">
+                                <Activity size={10} className="animate-pulse" />
+                                Live Feed
+                            </div>
+                        )}
+                        <button 
+                            onClick={handleManualRefresh}
+                        disabled={refreshing}
+                        className={`p-1.5 bg-zinc-800/80 border border-zinc-700/50 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95 disabled:opacity-50`}
+                        title="Manual Telemetry Sync"
+                    >
+                        <RefreshCw size={14} className={refreshing ? 'animate-spin text-fuchsia-400' : ''} />
+                    </button>
                     <div className="px-3 py-1.5 bg-zinc-800/80 border border-zinc-700/50 rounded-lg text-zinc-400 text-[10px] font-black uppercase flex items-center gap-2">
                         <History size={12} className="text-amber-400" />
                         Avg: {stats?.avgLatency ? `${Math.round(stats.avgLatency)}ms` : '---'}
@@ -176,40 +311,121 @@ export const NeuralCoreApp: React.FC = () => {
                             <Activity size={10} /> Tier Hierarchy
                         </h3>
                         
+                        <div className="p-4 rounded-2xl border border-zinc-800/50 bg-zinc-900/40 mb-4 overflow-hidden relative">
+                             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-transparent" />
+                             <h4 className="text-[10px] font-black text-zinc-600 uppercase mb-3 flex items-center gap-2 relative z-10">
+                                 <Activity size={10} className="text-emerald-500" /> Neural Heartbeat
+                             </h4>
+                             <div className="flex items-center gap-1 h-8 relative z-10">
+                                 {Array.from({ length: 40 }).map((_, i) => (
+                                     <motion.div
+                                         key={i}
+                                         animate={{ 
+                                             height: [2, Math.random() * 20 + 4, 2],
+                                             opacity: [0.1, 0.4, 0.1]
+                                         }}
+                                         transition={{ 
+                                             repeat: Infinity, 
+                                             duration: 2 + Math.random(), 
+                                             delay: i * 0.05,
+                                             ease: "easeInOut"
+                                         }}
+                                         className="w-0.5 bg-emerald-500/40 rounded-full"
+                                     />
+                                 ))}
+                             </div>
+                             <div className="mt-2 flex items-center justify-between relative z-10">
+                                 <span className="text-[7px] font-mono text-zinc-600">STABILITY_WAVE: OK</span>
+                                 <span className="text-[7px] font-mono text-emerald-500/60 animate-pulse">HZ: 0.85-SYNCHRONIZED</span>
+                             </div>
+                        </div>
+
                         {[
-                            {level: 1, name: 'Local Edge', provider: 'Ollama', color: 'emerald', success: stats?.successByProvider.ollama },
-                            {level: 2, name: 'Cloud Context', provider: 'Gemini', color: 'indigo', success: stats?.successByProvider.gemini },
-                            {level: 3, name: 'Final Wall', provider: 'Nvidia', color: 'fuchsia', success: stats?.successByProvider.nvidia },
-                            {level: 4, name: 'Heuristic', provider: 'Emergency', color: 'zinc', success: stats?.successByProvider.heuristic }
+                            { id: 'ollama', level: 1, name: 'Local Edge', provider: 'Ollama', color: 'emerald', success: stats?.successByProvider?.ollama },
+                            { id: 'gemini', level: 2, name: 'Cloud Context', provider: 'Gemini', color: 'indigo', success: stats?.successByProvider?.gemini },
+                            { id: 'nvidia', level: 3, name: 'Final Wall', provider: 'Nvidia', color: 'fuchsia', success: stats?.successByProvider?.nvidia },
+                            { id: 'heuristic', level: 4, name: 'Heuristic', provider: 'Emergency', color: 'zinc', success: stats?.successByProvider?.heuristic }
                         ].map((tier) => {
-                            const breaker = stats?.breakers?.[tier.provider.toLowerCase()];
+                            const breaker = stats?.breakers?.[tier.id];
                             const isFailing = breaker?.status === 'OPEN';
-                            const statusColor = isFailing ? 'rose' : (breaker?.status === 'HALF-OPEN' ? 'amber' : tier.color);
+                            const isQuarantined = !!(breaker?.quarantinedUntil && breaker.quarantinedUntil > Date.now());
+                            const isOff = breaker?.priority === 'OFF';
+                            const isHibernated = breaker?.priority === 'HIBERNATED';
+                            
+                            const statusColor = isOff ? 'zinc' : (isQuarantined ? 'amber' : (isFailing ? 'rose' : (breaker?.status === 'HALF-OPEN' ? 'amber' : tier.color)));
                             const latency = breaker?.avgLatency ? `${Math.round(breaker.avgLatency)}ms` : '---';
-                            const currentPriority = breaker?.priority || 'HIGH';
+                            const currentPriority = breaker?.priority || (tier.id === 'heuristic' ? 'SYS' : 'HIGH');
 
                             return (
-                                <div key={tier.level} className={`relative p-4 rounded-2xl border transition-all overflow-hidden bg-zinc-900/20 group hover:border-zinc-700 ${isFailing ? 'border-rose-500/30' : 'border-zinc-800/50'}`}>
+                                <div key={tier.level} className={`relative p-4 rounded-2xl border transition-all overflow-hidden bg-zinc-900/20 group hover:border-zinc-700 ${isOff ? 'opacity-40 grayscale' : ''} ${isFailing || isQuarantined ? 'border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.1)]' : 'border-zinc-800/50'}`}>
                                     <div className={`absolute top-0 left-0 w-1 h-full bg-${statusColor}-500/50 opacity-0 group-hover:opacity-100 transition-opacity`} />
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded bg-${statusColor}-500/10 text-${statusColor}-400 border border-${statusColor}-500/20 flex items-center gap-1.5`}>
-                                                <Circle size={6} fill="currentColor" className={breaker?.status === 'HALF-OPEN' ? 'animate-pulse' : ''} />
-                                                CB: {breaker?.status || 'UNKNOWN'}
-                                            </span>
-                                            {breaker && breaker.failures > 0 && (
-                                                <span className="text-[8px] font-mono text-rose-500/70 tabular-nums">
-                                                    {breaker.failures} FAIL
-                                                </span>
-                                            )}
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded bg-${statusColor}-500/10 text-${statusColor}-400 border border-${statusColor}-500/20 flex items-center gap-1.5`}>
+                                                        {isOff ? <Shield size={8} /> : isHibernated ? <Zap size={8} className="text-amber-400" /> : isQuarantined ? <AlertTriangle size={8} className="animate-pulse text-amber-400" /> : <Circle size={8} fill="currentColor" className={`${breaker?.status === 'HALF-OPEN' ? 'animate-pulse' : (breaker?.status === 'CLOSED' ? 'animate-none' : '')}`} />}
+                                                        {isOff ? 'OFFLINE / MANUAL' : 
+                                                         isQuarantined ? 'QUARANTINED / COOLDOWN' :
+                                                         isHibernated ? 'HIBERNATED / FALLBACK' :
+                                                         breaker?.status === 'CLOSED' ? 'CB: CLOSED / ACTIVE' : 
+                                                         breaker?.status === 'OPEN' ? 'CB: OPEN / HALTED' : 
+                                                         breaker?.status === 'HALF-OPEN' ? 'CB: HALF-OPEN / TESTING' : 'CB: UNKNOWN'}
+                                                    </span>
+                                                </div>
+                                                {breaker && breaker.failures > 0 && !isOff && (
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-16 h-1 bg-zinc-800 rounded-full overflow-hidden flex">
+                                                                <div 
+                                                                    className="h-full bg-rose-500 shadow-[0_0_5px_#f43f5e]" 
+                                                                    style={{ width: `${Math.min(100, (breaker.failures / 5) * 100)}%` }} 
+                                                                />
+                                                            </div>
+                                                            <span className="text-[7px] font-black text-rose-500/70 uppercase">
+                                                                {breaker.failures} ERRORS
+                                                            </span>
+                                                        </div>
+                                                        {breaker.errorCode && (
+                                                            <span className="text-[8px] font-mono text-rose-400 font-bold max-w-[150px] truncate">
+                                                                {breaker.errorCode}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isFailing && <AlertTriangle size={10} className="text-rose-500 animate-pulse" />}
-                                            <span className="text-[10px] font-mono text-zinc-500">{latency}</span>
                                         </div>
                                     </div>
                                     <h4 className="text-sm font-bold text-white uppercase tracking-tight">{tier.name}</h4>
-                                    <div className="flex items-center justify-between mt-2 text-[10px] font-mono text-zinc-600">
+                                    
+                                    <div className="mt-2 space-y-1.5">
+                                        <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                                            <span className="flex items-center gap-1.5 uppercase font-black text-[8px] tracking-widest text-zinc-600">
+                                                <Activity size={10} /> Latency
+                                            </span>
+                                            <span className={`font-bold ${breaker?.avgLatency && breaker.avgLatency < 800 ? 'text-emerald-400' : breaker?.avgLatency && breaker.avgLatency < 2000 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                                {latency}
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-1 bg-zinc-800/50 rounded-full overflow-hidden relative">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: breaker?.avgLatency ? `${Math.min(100, (breaker.avgLatency / 3000) * 100)}%` : '0%' }}
+                                                className={`h-full rounded-full ${breaker?.avgLatency && breaker.avgLatency < 800 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : breaker?.avgLatency && breaker.avgLatency < 2000 ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'}`}
+                                            />
+                                            {/* Scanning effect */}
+                                            <motion.div 
+                                                animate={{ x: [-10, 200] }}
+                                                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                                className="absolute top-0 left-0 w-8 h-full bg-white/20 blur-md skew-x-12"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-3 text-[10px] font-mono text-zinc-600">
                                         <span>{tier.provider}</span>
                                         {isFailing ? (
                                             <span className="text-rose-500 font-bold uppercase text-[8px]">Critically Degraded</span>
@@ -221,28 +437,30 @@ export const NeuralCoreApp: React.FC = () => {
                                     </div>
 
                                     {/* Priority Controls */}
-                                    <div className="mt-4 flex flex-col gap-2 border-t border-zinc-800/50 pt-3 opacity-60 hover:opacity-100 transition-opacity">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Priority</span>
-                                            <span className={`text-[8px] font-black uppercase ${currentPriority === 'HIGH' ? 'text-emerald-400' : currentPriority === 'HIBERNATED' ? 'text-amber-400' : 'text-zinc-600'}`}>{currentPriority}</span>
+                                    {tier.id !== 'heuristic' && (
+                                        <div className="mt-4 flex flex-col gap-2 border-t border-zinc-800/50 pt-3 opacity-60 hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Manual Override</span>
+                                                <span className={`text-[8px] font-black uppercase ${currentPriority === 'HIGH' ? 'text-emerald-400' : currentPriority === 'HIBERNATED' ? 'text-amber-400' : 'text-zinc-600'}`}>{currentPriority}</span>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                {['HIGH', 'HIBERNATED', 'OFF'].map((p) => (
+                                                    <button
+                                                        key={p}
+                                                        disabled={!!updating}
+                                                        onClick={() => updatePriority(tier.id, p as any)}
+                                                        className={`flex-1 py-1.5 text-[8px] font-black uppercase rounded-lg border transition-all active:scale-95 ${
+                                                            currentPriority === p 
+                                                                ? (p === 'HIGH' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : p === 'HIBERNATED' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]' : 'bg-white/10 border-white/20 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]')
+                                                                : 'bg-zinc-800/30 border-zinc-700/30 text-zinc-600 hover:border-zinc-500/50 hover:text-zinc-400'
+                                                        } ${updating === `${tier.id}-${p}` ? 'animate-pulse opacity-50' : ''}`}
+                                                    >
+                                                        {p.substring(0, 4)}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="flex gap-1">
-                                            {['HIGH', 'HIBERNATED', 'OFF'].map((p) => (
-                                                <button
-                                                    key={p}
-                                                    disabled={!!updating}
-                                                    onClick={() => updatePriority(tier.provider.toLowerCase(), p)}
-                                                    className={`flex-1 py-1 text-[8px] font-black uppercase rounded border transition-all ${
-                                                        currentPriority === p 
-                                                            ? (p === 'HIGH' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : p === 'HIBERNATED' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 'bg-white/10 border-white/20 text-white')
-                                                            : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-600 hover:border-zinc-500'
-                                                    } ${updating === `${tier.provider.toLowerCase()}-${p}` ? 'animate-pulse opacity-50' : ''}`}
-                                                >
-                                                    {p.substring(0, 4)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -303,6 +521,129 @@ export const NeuralCoreApp: React.FC = () => {
 
                         {/* Charts & Metrics */}
                         <div className="lg:col-span-3 space-y-6">
+                            {/* Neural Prompt Resonator */}
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-[#0C0C0E] border border-zinc-800 rounded-2xl p-6 relative overflow-hidden group shadow-[0_0_50px_rgba(168,85,247,0.05)]"
+                            >
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2" />
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/20">
+                                            <Zap size={20} className="text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Neural Prompt Resonator</h3>
+                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Architectural Signal Expansion</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-1 p-1 bg-black/40 rounded-lg border border-zinc-800">
+                                        {(['image', 'analysis', 'code'] as const).map((type) => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setPromptType(type)}
+                                                className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all ${promptType === type ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-zinc-600 hover:text-zinc-400'}`}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                                    <div className="space-y-4">
+                                        <div className="relative">
+                                            <textarea 
+                                                value={rawPrompt}
+                                                onChange={(e) => setRawPrompt(e.target.value)}
+                                                placeholder="Inject raw neural seed idea here..."
+                                                className="w-full h-32 bg-black/40 border border-zinc-800 rounded-xl p-4 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-purple-500/50 transition-all resize-none custom-scrollbar"
+                                            />
+                                            <div className="absolute bottom-3 right-3">
+                                                <button 
+                                                    onClick={resonatePrompt}
+                                                    disabled={refining || !rawPrompt.trim()}
+                                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] disabled:opacity-50 disabled:grayscale flex items-center gap-2"
+                                                >
+                                                    {refining ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+                                                    Resonate
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 px-1">
+                                            <Circle size={8} className="text-zinc-700" fill="currentColor" />
+                                            <span className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest leading-none">Ready for interference</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-black/60 border border-zinc-800/80 rounded-xl p-4 min-h-[128px] relative group/output">
+                                        <AnimatePresence mode="wait">
+                                            {refinedData ? (
+                                                <motion.div 
+                                                    key="output"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="space-y-4"
+                                                >
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Refined Signal</span>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(refinedData.refinedPrompt);
+                                                                    setLogs(prev => [`[${new Date().toLocaleTimeString()}] UI: Refined prompt copied to clipboard.`, ...prev].slice(0, 50));
+                                                                }}
+                                                                className="text-[8px] font-black text-zinc-500 hover:text-white uppercase transition-colors"
+                                                            >
+                                                                Copy Signal
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-[12px] font-mono text-zinc-300 leading-relaxed italic">
+                                                            "{refinedData.refinedPrompt}"
+                                                        </p>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800/50">
+                                                        <div>
+                                                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 block">Architecture</span>
+                                                            <p className="text-[10px] text-zinc-400 leading-tight">{refinedData.reasoning}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 block">Optimization</span>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {refinedData.tips.map((t, i) => (
+                                                                    <span key={i} className="px-1.5 py-0.5 bg-zinc-800 text-[8px] text-zinc-500 rounded uppercase font-bold">{t}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ) : (
+                                                <div key="placeholder" className="h-full flex flex-col items-center justify-center text-center opacity-30">
+                                                    <Brain size={32} className="text-zinc-700 mb-2" />
+                                                    <p className="text-[10px] font-black text-zinc-600 uppercase">Awaiting Neural Resonance</p>
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+                                        
+                                        {refining && (
+                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-20 flex items-center justify-center rounded-xl">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                                        <motion.div 
+                                                            animate={{ x: [-48, 48] }}
+                                                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                                            className="w-full h-full bg-purple-500 shadow-[0_0_10px_#a855f7]"
+                                                        />
+                                                    </div>
+                                                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-[0.3em] animate-pulse">Expanding Signal...</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-[#0C0C0E] border border-zinc-800 rounded-2xl p-6 relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
