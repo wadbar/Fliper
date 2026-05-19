@@ -32,20 +32,26 @@ export const TaskMonitor: React.FC = () => {
   };
 
   useEffect(() => {
-    // Connect to SSE for task updates
+    let isMounted = true;
     const eventSource = new EventSource('/api/system/download/status');
     
     eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setTasks(data);
-      if (data.length > 0) setIsVisible(true);
+      if (!isMounted) return;
+      try {
+        const data = JSON.parse(event.data);
+        setTasks(data);
+        if (data.length > 0) setIsVisible(true);
+      } catch (err) {
+        // ignore
+      }
     };
 
     eventSource.onerror = () => {
-      console.warn("SSE Connection lost. Retrying...");
+      // Allow native reconnection
     };
 
     return () => {
+      isMounted = false;
       eventSource.close();
     };
   }, []);

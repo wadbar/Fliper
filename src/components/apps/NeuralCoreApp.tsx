@@ -34,13 +34,17 @@ export const NeuralCoreApp: React.FC = () => {
     const [promptType, setPromptType] = useState<'image' | 'analysis' | 'code'>('image');
     const [prompt, setPrompt] = useState('');
     const [imageSize, setImageSize] = useState({ width: 600, height: 800 });
+    const [visualStyle, setVisualStyle] = useState('Photorealistic');
     const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+
+    const VISUAL_STYLES = ['Photorealistic', 'Cyberpunk', 'Pixel Art', 'Anime', 'Concept Art', '3D Render', 'Watercolor', 'Minimalist'];
     const [generating, setGenerating] = useState(false);
+    const [isRefining, setIsRefining] = useState(false);
 
     const TASK_SUGGESTIONS = {
-        image: ['Photorealistic', 'Cyberpunk', 'Minimalist', '4k', 'Cinematic', 'Abstract', 'Vibrant', 'Dark'],
-        analysis: ['Trend Analysis', 'Feature Breakdown', 'Summarization', 'Structured Output', 'Comparative', 'Anomaly Detection'],
-        code: ['TypeScript React Function', 'Node.js Express Route', 'Data Processing Hook', 'CSS Layout Pattern']
+        image: ['Photorealistic', 'Cyberpunk', 'Minimalist', '4k', 'Cinematic', 'Abstract', 'Vibrant', 'Dark', 'Octane Render', 'Unreal Engine 5'],
+        analysis: ['Trend Analysis', 'Feature Breakdown', 'Summarization', 'Structured Output', 'Comparative', 'Anomaly Detection', 'JSON Format', 'Time-Series Analysis'],
+        code: ['TypeScript React Function', 'Node.js Express Route', 'Data Processing Hook', 'CSS Layout Pattern', 'Error Handling', 'Performance Optimization']
     };
 
     const PREDEFINED_TEMPLATES = {
@@ -53,19 +57,31 @@ export const NeuralCoreApp: React.FC = () => {
             { name: 'Market Anomaly Detector', prompt: 'Examine these market data points and detect any significant anomalies, comparing them against historical norms and outlining possible root causes.' }
         ],
         code: [
-            { name: 'TypeScript Interface Skeleton', prompt: 'Generate a clean, reusable TypeScript interface structure for a complex data model entity, including optional fields and documented properties.' },
-            { name: 'Fast Async API Handler', prompt: 'Write a robust, production-grade asynchronous Node.js Express API route handler with proper error catching, validation, and status code management.' }
+            { name: 'Code Snippet', prompt: 'Generate a robust, production-grade asynchronous Node.js Express API route handler code snippet with proper error catching, validation, and status code management.' },
+            { name: 'TypeScript Interface Skeleton', prompt: 'Generate a clean, reusable TypeScript interface structure for a complex data model entity, including optional fields and documented properties.' }
         ]
     };
 
     const addSuggestion = (suggestion: string) => {
-        setPrompt(prev => prev ? `${prev}, ${suggestion}` : suggestion);
+        setPrompt(prev => {
+            if (!prev) return suggestion;
+            if (prev.includes(suggestion)) return prev;
+            return `${prev}, ${suggestion}`;
+        });
     };
+
+    const manualRefreshTimeoutRef = useRef<number | NodeJS.Timeout | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const generateSignal = async () => {
         if (!prompt.trim() || generating) return;
         setGenerating(true);
         if (promptType === 'image') setGeneratedImageUrl(null);
+        
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
         
         const timestamp = new Date().toLocaleTimeString();
         setLogs(prev => [`[${timestamp}] INFO: Initiating ${promptType} signal.`, ...prev].slice(0, 50));
@@ -76,9 +92,10 @@ export const NeuralCoreApp: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    prompt, 
+                    prompt: promptType === 'image' && visualStyle ? `${prompt}. style: ${visualStyle}` : prompt, 
                     ...(promptType === 'image' ? imageSize : {})
-                })
+                }),
+                signal: abortControllerRef.current.signal
             });
 
             if (!response.ok) {
@@ -177,8 +194,13 @@ export const NeuralCoreApp: React.FC = () => {
     const handleManualRefresh = async () => {
         setRefreshing(true);
         await fetchStats();
+        
+        if (manualRefreshTimeoutRef.current) {
+            clearTimeout(manualRefreshTimeoutRef.current as number);
+        }
+        
         // Artificial delay for visual feedback if it finishes too fast
-        setTimeout(() => setRefreshing(false), 600);
+        manualRefreshTimeoutRef.current = setTimeout(() => setRefreshing(false), 600);
         setLogs(prev => [`[${new Date().toLocaleTimeString()}] COMMAND: Manual telemetry sync initiated.`, ...prev].slice(0, 50));
     };
 
@@ -219,17 +241,20 @@ export const NeuralCoreApp: React.FC = () => {
     };
 
     useEffect(() => {
+        let isMounted = true;
         // Initial Fetch
         fetchStats(); 
 
         // SSE Telemetry Stream
         const telemetrySource = new EventSource('/api/ai/telemetry');
         telemetrySource.onopen = () => {
+            if (!isMounted) return;
             setStreaming(true);
             setLogs(prev => [`[${new Date().toLocaleTimeString()}] LINK: Neural telemetry stream established.`, ...prev].slice(0, 50));
         };
         
         telemetrySource.onmessage = (event) => {
+            if (!isMounted) return;
             try {
                 const data = JSON.parse(event.data);
                 updateTelemetryState(data);
@@ -239,11 +264,13 @@ export const NeuralCoreApp: React.FC = () => {
         };
 
         telemetrySource.onerror = () => {
+            if (!isMounted) return;
             setStreaming(false);
         };
 
         // Fallback polling (less frequent)
         const fallbackInterval = setInterval(() => {
+            if (!isMounted) return;
             if (!telemetrySource || telemetrySource.readyState !== 1) {
                 fetchStats();
             }
@@ -252,6 +279,7 @@ export const NeuralCoreApp: React.FC = () => {
         // System Logs Stream
         const eventSource = new EventSource('/api/system/logs/stream');
         eventSource.onmessage = (event) => {
+            if (!isMounted) return;
             try {
                 const log = JSON.parse(event.data);
                 const logStr = `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.level}: ${log.message}`;
@@ -262,9 +290,12 @@ export const NeuralCoreApp: React.FC = () => {
         };
 
         return () => {
+            isMounted = false;
             telemetrySource.close();
             eventSource.close();
             clearInterval(fallbackInterval);
+            if (manualRefreshTimeoutRef.current) clearTimeout(manualRefreshTimeoutRef.current as number);
+            if (abortControllerRef.current) abortControllerRef.current.abort();
         };
     }, []); // Only once on mount
 
@@ -613,16 +644,23 @@ export const NeuralCoreApp: React.FC = () => {
                                         ))}
                                     </div>
                                     <div className="space-y-4">
-                                        <div className="relative">
+                                        <div className="relative overflow-hidden rounded-xl">
                                             <textarea 
                                                 value={prompt}
                                                 onChange={(e) => setPrompt(e.target.value)}
                                                 placeholder="Inject raw neural seed concept here..."
-                                                className="w-full h-32 bg-black/40 border border-zinc-800 rounded-xl p-4 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-fuchsia-500/50 transition-all resize-none custom-scrollbar"
+                                                disabled={generating || isRefining}
+                                                className="w-full h-32 bg-black/40 border border-zinc-800 rounded-xl p-4 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-fuchsia-500/50 transition-all resize-none custom-scrollbar disabled:opacity-50"
                                             />
+                                            {isRefining && (
+                                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4">
+                                                    <Brain size={24} className="text-fuchsia-500 animate-pulse mb-2" />
+                                                    <span className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest animate-pulse text-center">Refining neural seed...</span>
+                                                </div>
+                                            )}
                                             <button 
                                                 onClick={async () => {
-                                                    setGenerating(true);
+                                                    setIsRefining(true);
                                                     try {
                                                         const response = await fetch('/api/ai/refine-prompt', {
                                                             method: 'POST',
@@ -635,25 +673,52 @@ export const NeuralCoreApp: React.FC = () => {
                                                     } catch (e) {
                                                         console.error(e);
                                                     } finally {
-                                                        setGenerating(false);
+                                                        setIsRefining(false);
                                                     }
                                                 }}
-                                                className="absolute top-2 right-2 p-2 bg-fuchsia-900/50 hover:bg-fuchsia-800 text-fuchsia-200 rounded-lg transition-colors"
+                                                disabled={generating || isRefining || !prompt.trim()}
+                                                className="absolute top-2 right-2 p-2 bg-fuchsia-900/50 hover:bg-fuchsia-800 text-fuchsia-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Refine Prompt"
                                             >
-                                                <Brain size={16} />
+                                                {isRefining ? <RefreshCw size={16} className="animate-spin text-fuchsia-400" /> : <Brain size={16} />}
                                             </button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {TASK_SUGGESTIONS[promptType].map(suggestion => (
-                                                <button
-                                                    key={suggestion}
-                                                    onClick={() => addSuggestion(suggestion)}
-                                                    className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-[9px] font-bold text-zinc-400 rounded-md transition-colors"
+                                        {promptType === 'image' && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <label className="text-[10px] font-black uppercase text-zinc-500">Visual Style:</label>
+                                                <select
+                                                    value={visualStyle}
+                                                    onChange={(e) => setVisualStyle(e.target.value)}
+                                                    disabled={generating || isRefining}
+                                                    className="bg-zinc-800 border-none text-[10px] uppercase font-bold text-zinc-300 rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                                                 >
-                                                    + {suggestion}
-                                                </button>
-                                            ))}
+                                                    {VISUAL_STYLES.map(style => (
+                                                        <option key={style} value={style}>{style}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                        <div className="flex flex-wrap gap-2">
+                                            {(() => {
+                                                const suggestions = TASK_SUGGESTIONS[promptType];
+                                                const lastWord = prompt.split(/[\s,]+/).pop()?.toLowerCase() || '';
+                                                let activeSuggestions = suggestions.filter(s => !prompt.toLowerCase().includes(s.toLowerCase()));
+                                                
+                                                if (lastWord) {
+                                                    const matchingWords = activeSuggestions.filter(s => s.toLowerCase().includes(lastWord));
+                                                    if (matchingWords.length > 0) activeSuggestions = matchingWords;
+                                                }
+
+                                                return activeSuggestions.map(suggestion => (
+                                                    <button
+                                                        key={suggestion}
+                                                        onClick={() => addSuggestion(suggestion)}
+                                                        className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-[9px] font-bold text-zinc-400 rounded-md transition-colors"
+                                                    >
+                                                        + {suggestion}
+                                                    </button>
+                                                ));
+                                            })()}
                                         </div>
                                         <div className="mt-4 border-t border-zinc-800 pt-4">
                                             <h4 className="text-[10px] uppercase font-black text-zinc-600 mb-2">Pre-defined Templates</h4>
@@ -691,10 +756,20 @@ export const NeuralCoreApp: React.FC = () => {
                                             <button 
                                                 onClick={generateSignal}
                                                 disabled={generating || !prompt.trim()}
-                                                className="flex-1 px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(217,70,239,0.3)] disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2"
+                                                className="flex-1 px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(217,70,239,0.3)] disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2 relative overflow-hidden"
                                             >
-                                                {generating ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                                                Synthesize
+                                                {generating ? (
+                                                    <>
+                                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                                        <RefreshCw size={12} className="animate-spin relative z-10" />
+                                                        <span className="relative z-10">Synthesizing...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Zap size={12} />
+                                                        <span>Synthesize</span>
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
                                     </div>

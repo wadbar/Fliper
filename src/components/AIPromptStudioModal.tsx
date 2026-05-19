@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Sparkles, Copy, Type, Settings, Download, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,13 +15,24 @@ export const AIPromptStudioModal: React.FC<AIPromptStudioModalProps> = ({ isOpen
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const generationTimeout = useRef<number | NodeJS.Timeout | null>(null);
+  const copyTimeout = useRef<number | NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (generationTimeout.current) clearTimeout(generationTimeout.current as number);
+      if (copyTimeout.current) clearTimeout(copyTimeout.current as number);
+    };
+  }, []);
 
   if (!isOpen) return null;
 
   const handleGenerate = () => {
+    if (isGenerating) return;
     setIsGenerating(true);
     // Simulate generation based on the advanced prompt structure
-    setTimeout(() => {
+    if (generationTimeout.current) clearTimeout(generationTimeout.current as number);
+    generationTimeout.current = setTimeout(() => {
       const base = `A photorealistic video game cover art featuring an epic protagonist in a hyper-detailed ${theme || 'sci-fi and cyberpunk'} setting. The main character is wearing intricate, battle-worn tactical armor with glowing LED accents. Cinematic lighting, dramatic neon blue and orange color grading, volumetric smoke, ray-traced reflections, 8k resolution, Unreal Engine 5 render style, cinematic composition, ultra-detailed textures, depth of field. A clean space reserved for the game title at the top, professional graphic design, masterpiece, 35mm lens, sharp focus. --ar 3:4`;
       setGeneratedPrompt(base);
       setIsGenerating(false);
@@ -31,7 +42,8 @@ export const AIPromptStudioModal: React.FC<AIPromptStudioModalProps> = ({ isOpen
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedPrompt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimeout.current) clearTimeout(copyTimeout.current as number);
+    copyTimeout.current = setTimeout(() => setCopied(false), 2000);
   };
 
   return (

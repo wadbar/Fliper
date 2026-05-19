@@ -169,14 +169,36 @@ export class AdvancedQueueManager {
 
       observer.log(task.id, `Processing ROM: ${romPath}`);
 
-      // High-fidelity block compression simulation
-      for (let i = 0; i <= 100; i += 5) {
-        task.progress = i;
-        task.message = `Compressing Blocks... [${i}%]`;
-        this.broadcast();
-        
-        await new Promise(r => setTimeout(r, i < 50 ? 30 : 80));
-      }
+      // Real Gzip Compression stream
+      const targetPath = path.resolve(process.cwd(), romPath);
+      if (!fs.existsSync(targetPath)) throw new Error("ROM_FILE_NOT_FOUND");
+      
+      const outPath = targetPath + '.gz';
+      const stat = fs.statSync(targetPath);
+      let processed = 0;
+
+      await new Promise<void>((resolve, reject) => {
+         const readStream = fs.createReadStream(targetPath);
+         const writeStream = fs.createWriteStream(outPath);
+         const gzip = zlib.createGzip({ level: 9 });
+
+         readStream.on('data', (chunk) => {
+             processed += chunk.length;
+             const progress = Math.floor((processed / stat.size) * 100);
+             if (progress > task.progress + 2) {
+                 task.progress = progress;
+                 task.message = `Compressing Blocks... [${progress}%]`;
+                 this.broadcast();
+             }
+         });
+
+         readStream.pipe(gzip).pipe(writeStream);
+         
+         writeStream.on('finish', () => resolve());
+         writeStream.on('error', (e) => reject(e));
+         readStream.on('error', (e) => reject(e));
+         gzip.on('error', (e) => reject(e));
+      });
 
       task.status = 'completed';
       task.message = 'CHD Optimized: ROM_IMAGE_READY';
@@ -300,21 +322,37 @@ export class AdvancedQueueManager {
     this.broadcast();
 
     try {
-      // Logic simulation: hashing large files
-      for (let i = 0; i <= 100; i += 20) {
-        task.progress = i;
-        task.message = `Computing MD5/SHA1... ${i}%`;
-        this.broadcast();
-        await new Promise(r => setTimeout(r, 200));
-      }
+      const { romPath } = task as any;
+      if (!romPath) throw new Error("MISSING_ROM_PATH");
+      const targetPath = path.resolve(process.cwd(), romPath);
+      if (!fs.existsSync(targetPath)) throw new Error("ROM_FILE_NOT_FOUND");
 
-      const isValid = Math.random() > 0.3; // Simulated check
-      task.status = 'completed';
-      task.message = isValid ? "ROM Verified: MATCHED" : "ROM Invalid: BAD DUMP DETECTED";
+      const hash = crypto.createHash('sha256');
+      const stream = fs.createReadStream(targetPath);
+      const stat = fs.statSync(targetPath);
       
-      if (!isValid) {
-        logger.warn("Integrity fault detected", { rom: task.name });
-      }
+      let processed = 0;
+      
+      await new Promise<void>((resolve, reject) => {
+          stream.on('data', (chunk) => {
+              hash.update(chunk);
+              processed += chunk.length;
+              const newProgress = Math.floor((processed / stat.size) * 100);
+              if (newProgress > task.progress + 5) {
+                  task.progress = newProgress;
+                  task.message = `Computing SHA256... ${newProgress}%`;
+                  this.broadcast();
+              }
+          });
+          stream.on('end', () => resolve());
+          stream.on('error', (err) => reject(err));
+      });
+
+      const finalHash = hash.digest('hex');
+      task.status = 'completed';
+      task.progress = 100;
+      task.message = `ROM Verified: ${finalHash.substring(0, 16)}...`;
+      this.broadcast();
     } catch (e: any) {
       task.status = 'error';
       task.message = `Validation Error: ${e.message}`;
@@ -327,12 +365,38 @@ export class AdvancedQueueManager {
     task.status = 'compressing';
     this.broadcast();
     try {
-      for (let i = 0; i <= 100; i += 10) {
-        task.progress = i;
-        task.message = `Processing blocks... ${i}%`;
-        this.broadcast();
-        await new Promise(r => setTimeout(r, 100));
-      }
+      const { romPath } = task as any;
+      if (!romPath) throw new Error("MISSING_TARGET_PATH");
+      const targetPath = path.resolve(process.cwd(), romPath);
+      if (!fs.existsSync(targetPath)) throw new Error("FILE_NOT_FOUND");
+      
+      const outPath = targetPath + '.zip.gz';
+      const stat = fs.statSync(targetPath);
+      let processed = 0;
+
+      await new Promise<void>((resolve, reject) => {
+         const readStream = fs.createReadStream(targetPath);
+         const writeStream = fs.createWriteStream(outPath);
+         const gzip = zlib.createGzip({ level: 9 });
+
+         readStream.on('data', (chunk) => {
+             processed += chunk.length;
+             const progress = Math.floor((processed / stat.size) * 100);
+             if (progress > task.progress + 2) {
+                 task.progress = progress;
+                 task.message = `Compressing File... ${progress}%`;
+                 this.broadcast();
+             }
+         });
+
+         readStream.pipe(gzip).pipe(writeStream);
+         
+         writeStream.on('finish', () => resolve());
+         writeStream.on('error', (e) => reject(e));
+         readStream.on('error', (e) => reject(e));
+         gzip.on('error', (e) => reject(e));
+      });
+
       task.status = 'completed';
       task.message = 'Optimization Complete';
     } catch (e: any) {
@@ -347,23 +411,42 @@ export class AdvancedQueueManager {
     task.status = 'downloading';
     this.broadcast();
     try {
+      const { url } = task as any;
+      if (!url) throw new Error("MISSING_DOWNLOAD_URL");
+
       const dbDir = path.join(process.cwd(), 'database');
       await fs.promises.mkdir(dbDir, { recursive: true });
       const targetFile = path.join(dbDir, `${task.id}.tmp`);
       const fileStream = fs.createWriteStream(targetFile);
       
-      const totalSize = 25 * 1024 * 1024;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.body) throw new Error("NO_RESPONSE_BODY");
+
+      const contentLength = Number(response.headers.get('content-length')) || 0;
       let written = 0;
-      while (written < totalSize) {
-        const chunk = crypto.randomBytes(1024 * 512);
-        fileStream.write(chunk);
-        written += chunk.length;
-        task.progress = Math.floor((written / totalSize) * 100);
-        this.broadcast();
-        await new Promise(r => setTimeout(r, 50));
+
+      const reader = response.body.getReader();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+            fileStream.write(value);
+            written += value.length;
+            if (contentLength > 0) {
+               const newProgress = Math.floor((written / contentLength) * 100);
+               if (newProgress > task.progress + 2) {
+                   task.progress = newProgress;
+                   this.broadcast();
+               }
+            }
+        }
       }
+
       fileStream.end();
       task.status = 'completed';
+      task.progress = 100;
       task.message = 'Download Complete';
     } catch (e: any) {
       task.status = 'error';

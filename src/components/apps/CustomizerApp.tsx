@@ -27,6 +27,10 @@ export const CustomizerApp: React.FC = () => {
     const [aiProbing, setAiProbing] = useState(false);
     const [probeLogs, setProbeLogs] = useState<string[]>([]);
     const [isLiveMedia, setIsLiveMedia] = useState(true); // Default behavior in installation phase
+    const isMountedRef = React.useRef(true);
+    React.useEffect(() => {
+        return () => { isMountedRef.current = false; };
+    }, []);
 
     const runAiHardwareProbe = async () => {
         setAiProbing(true);
@@ -50,9 +54,11 @@ export const CustomizerApp: React.FC = () => {
         ];
 
         for (const log of logs) {
+            if (!isMountedRef.current) return;
             setProbeLogs(prev => [...prev, `[AI] ${log}`]);
             await new Promise(r => setTimeout(r, 600));
         }
+        if (!isMountedRef.current) return;
         setProfile('adaptive');
         setBase('arch');
         setAiProbing(false);
@@ -105,13 +111,15 @@ export const CustomizerApp: React.FC = () => {
                 body: JSON.stringify(recipe)
             });
 
+            if (!isMountedRef.current) return;
+
             if (res.ok) {
                 alert("Build protocol initiated. Monitor 'Downloader' for progress.");
             }
         } catch (e) {
-            alert("BUILD_INIT_FAULT");
+            if (isMountedRef.current) alert("BUILD_INIT_FAULT");
         } finally {
-            setBuilding(false);
+            if (isMountedRef.current) setBuilding(false);
         }
     };
 

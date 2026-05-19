@@ -141,13 +141,13 @@ export const DownloaderModal: React.FC<DownloaderModalProps> = ({ isOpen, onClos
 
   const handleDownload = async (type: string, name?: string) => {
     try {
-      fetch('/api/download', {
+      await fetch('/api/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, name: name || type })
       });
     } catch (e) {
-      console.error(e);
+      console.warn('Failed to queue download', e);
     }
   };
 

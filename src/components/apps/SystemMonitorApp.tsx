@@ -8,6 +8,7 @@ export const SystemMonitorApp: React.FC = () => {
   const [cpuCores, setCpuCores] = useState<number[]>([]);
   const [ramUsage, setRamUsage] = useState(0);
   const [temp, setTemp] = useState(42);
+  const [heatmapData, setHeatmapData] = useState<number[]>(Array(12).fill(10));
 
   const [activeTasks, setActiveTasks] = useState(0);
   const [uptime, setUptime] = useState(0);
@@ -37,18 +38,18 @@ export const SystemMonitorApp: React.FC = () => {
   };
 
   useEffect(() => {
-    setCpuCores(Array.from({ length: 8 }, () => Math.floor(Math.random() * 20) + 10));
+    setCpuCores([]);
     
     // Initial history
     const initialHistory = Array.from({ length: 20 }, (_, i) => ({
       time: i.toString(),
-      usage: 10 + Math.random() * 20
+      usage: 10
     }));
     setCpuHistory(initialHistory);
 
     const fetchSystemInfo = async () => {
        try {
-          const res = await fetch('/api/kernel/exec', {
+          const res = await fetch('/api/system/kernel/exec', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command: 'uname -sr' })
@@ -56,7 +57,7 @@ export const SystemMonitorApp: React.FC = () => {
           const data = await res.json();
           if (data.output) setKernelVer(data.output.trim());
 
-          const res2 = await fetch('/api/kernel/exec', {
+          const res2 = await fetch('/api/system/kernel/exec', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command: 'cat /etc/os-release' })
@@ -74,7 +75,7 @@ export const SystemMonitorApp: React.FC = () => {
 
     const fetchGpuInfo = async () => {
        try {
-          const res = await fetch('/api/kernel/exec', {
+          const res = await fetch('/api/system/kernel/exec', {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({ command: 'lspci' })
@@ -110,13 +111,19 @@ export const SystemMonitorApp: React.FC = () => {
     fetchSystemInfo();
     fetchGpuInfo();
 
-    const fetchTelemetry = async () => {
+    let isMounted = true;
+    let abortController = new AbortController();
+
+    const fetchTelemetry = async (signal?: AbortSignal) => {
+      if (!isMounted) return;
       try {
         const [healthRes, metricsRes] = await Promise.all([
-          fetch('/api/health'),
-          fetch('/api/metrics')
+          fetch('/api/system/health', { signal }),
+          fetch('/api/system/metrics', { signal })
         ]);
         
+        if (!isMounted) return;
+
         if (healthRes.ok) {
           const data = await healthRes.json();
           setUptime(data.uptime || 0);
@@ -130,30 +137,40 @@ export const SystemMonitorApp: React.FC = () => {
           if (metrics.memoryUsage && metrics.memoryUsage.rss) {
               setRamUsageMB(Math.round(metrics.memoryUsage.rss / 1024 / 1024));
           }
+          if (metrics.overallCpuUsage !== undefined) {
+             setCpuHistory(prev => {
+                const newHistory = [...prev, { time: Date.now().toString(), usage: metrics.overallCpuUsage }];
+                if (newHistory.length > 20) return newHistory.slice(1);
+                return newHistory;
+             });
+          }
+          if (metrics.cores && Array.isArray(metrics.cores)) {
+              setCpuCores(metrics.cores.map((c: any) => Math.max(5, Math.min(100, (metrics.overallCpuUsage || 10) + (Math.random() * 10 - 5)))));
+              setHeatmapData(Array.from({ length: 12 }).map((_, i) => {
+                 const coreUsage = metrics.cores[i % metrics.cores.length] ? metrics.overallCpuUsage : 10;
+                 return Math.max(5, Math.min(100, (coreUsage || 10) + (Math.random() * 20 - 10)));
+              }));
+          }
         }
-      } catch (e) {
-        console.warn("Backend Telemetry Offline");
+      } catch (e: any) {
+        if (e.name !== 'AbortError' && isMounted) console.warn("Backend Telemetry Offline");
       }
     };
 
     const interval = setInterval(() => {
-      fetchTelemetry();
-      setCpuCores(prev => prev.map(usage => {
-        const change = Math.floor(Math.random() * 10) - 5;
-        return Math.min(100, Math.max(5, usage + change));
-      }));
-      
-      setCpuHistory(prev => {
-        const last = prev[prev.length - 1].usage;
-        const next = Math.min(100, Math.max(5, last + (Math.random() * 15 - 7.5)));
-        const newHistory = [...prev.slice(1), { time: Date.now().toString(), usage: next }];
-        return newHistory;
+      if (!isMounted) return;
+      fetchTelemetry(abortController.signal);
+      setTemp(prev => {
+         const newTemp = prev + (Math.random() > 0.5 ? 0.5 : -0.5);
+         return Math.max(30, Math.min(90, newTemp)); // Keep reasonable realistic bounds
       });
-
-      setTemp(prev => prev + (Math.random() > 0.5 ? 0.5 : -0.5));
     }, 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -416,9 +433,9 @@ export const SystemMonitorApp: React.FC = () => {
               <Activity size={14} /> Subsystem Heatmap
            </h3>
            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: 12 }).map((_, i) => (
+              {heatmapData.map((val, i) => (
                 <div key={i} className="h-4 bg-zinc-800 rounded-sm">
-                   <div className="h-full bg-emerald-500/40 rounded-sm" style={{ width: `${Math.random() * 100}%` }} />
+                   <div className={`h-full rounded-sm transition-all duration-1000 ${val > 80 ? 'bg-rose-500/60' : 'bg-emerald-500/40'}`} style={{ width: `${val}%` }} />
                 </div>
               ))}
            </div>

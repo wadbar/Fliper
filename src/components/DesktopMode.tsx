@@ -73,13 +73,31 @@ function useHardwareStats() {
   const [stats, setStats] = useState({ cpu: 12, ram: 14.5 });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats({
-        cpu: Math.floor(Math.random() * 15) + 5,
-        ram: 14.5 + (Math.random() * 0.5 - 0.25)
-      });
-    }, 2000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    let abortController = new AbortController();
+    const fetchStats = async () => {
+       if (!isMounted) return;
+       try {
+          const res = await fetch('/api/system/metrics', { signal: abortController.signal });
+          const data = await res.json();
+          if (data && data.overallCpuUsage !== undefined && isMounted) {
+             setStats({
+                cpu: data.overallCpuUsage,
+                ram: data.memoryUsage ? Math.round(data.memoryUsage.rss / 1024 / 1024 / 1024 * 10) / 10 : 14.5
+             });
+          }
+       } catch (err: any) {
+          if (err.name !== 'AbortError' && isMounted) console.warn('Desktop Telemetry error');
+       }
+    };
+    fetchStats();
+    
+    const interval = setInterval(fetchStats, 2000);
+    return () => {
+       isMounted = false;
+       abortController.abort();
+       clearInterval(interval);
+    };
   }, []);
 
   return stats;

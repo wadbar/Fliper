@@ -14,6 +14,7 @@ export const TelemetryWidget: React.FC = () => {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     let frameCount = 0;
     let lastTime = performance.now();
     let animationFrameId: number;
@@ -22,7 +23,7 @@ export const TelemetryWidget: React.FC = () => {
       frameCount++;
       const now = performance.now();
       if (now - lastTime >= 1000) {
-        setMetrics(prev => ({ ...prev, fps: frameCount }));
+        if (isMounted) setMetrics(prev => ({ ...prev, fps: frameCount }));
         frameCount = 0;
         lastTime = now;
       }
@@ -31,25 +32,34 @@ export const TelemetryWidget: React.FC = () => {
 
     animationFrameId = requestAnimationFrame(measureFPS);
 
+    let abortController = new AbortController();
+
     // Simulate real ping check
     const pingInterval = setInterval(async () => {
+      if (!isMounted) return;
       const start = performance.now();
       try {
-        await fetch('/api/games');
+        await fetch('/api/games', { signal: abortController.signal });
         const end = performance.now();
         const latency = Math.round(end - start);
-        setMetrics(prev => ({ 
-          ...prev, 
-          latency,
-          memory: (performance as any).memory ? Math.round((performance as any).memory.usedJSHeapSize / 1024 / 1024) : 0,
-          mode: latency > 500 ? 'DEGRADED' : 'STABLE'
-        }));
-      } catch (e) {
-        setMetrics(prev => ({ ...prev, mode: 'OFFLINE' }));
+        if (isMounted) {
+          setMetrics(prev => ({ 
+            ...prev, 
+            latency,
+            memory: (performance as any).memory ? Math.round((performance as any).memory.usedJSHeapSize / 1024 / 1024) : 0,
+            mode: latency > 500 ? 'DEGRADED' : 'STABLE'
+          }));
+        }
+      } catch (e: any) {
+        if (e.name !== 'AbortError' && isMounted) {
+          setMetrics(prev => ({ ...prev, mode: 'OFFLINE' }));
+        }
       }
     }, 5000);
 
     return () => {
+      isMounted = false;
+      abortController.abort();
       cancelAnimationFrame(animationFrameId);
       clearInterval(pingInterval);
     };

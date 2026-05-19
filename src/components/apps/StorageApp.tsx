@@ -17,39 +17,44 @@ export const StorageApp: React.FC = () => {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  const isMountedRef = React.useRef(true);
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   const fetchLocal = async () => {
     try {
       const res = await fetch('/api/system/files');
-      if (res.ok) setLocalFiles(await res.json());
+      if (res.ok && isMountedRef.current) setLocalFiles(await res.json());
     } catch (e) {
-      console.error("VFS_FETCH_FAILED");
+      if (isMountedRef.current) console.error("VFS_FETCH_FAILED");
     }
   };
 
   const fetchCloud = async () => {
     try {
       const res = await fetch('/api/cloud/files');
-      if (res.ok) setCloudFiles(await res.json());
+      if (res.ok && isMountedRef.current) setCloudFiles(await res.json());
     } catch (e) {
-      console.error("CLOUD_FETCH_FAILED");
+      if (isMountedRef.current) console.error("CLOUD_FETCH_FAILED");
     }
   };
 
   const refresh = async () => {
     setLoading(true);
     await Promise.all([fetchLocal(), fetchCloud()]);
-    setLoading(false);
+    if (isMountedRef.current) setLoading(false);
   };
 
   const deleteLocal = async (name: string) => {
     setDeleting(name);
     try {
       const res = await fetch(`/api/system/files/${encodeURIComponent(name)}`, { method: 'DELETE' });
-      if (res.ok) fetchLocal();
+      if (res.ok && isMountedRef.current) fetchLocal();
     } catch (e) {
-      alert("FS_PERMISSION_DENIED");
+      if (isMountedRef.current) alert("FS_PERMISSION_DENIED");
     } finally {
-      setDeleting(null);
+      if (isMountedRef.current) setDeleting(null);
     }
   };
 

@@ -12,10 +12,17 @@ export const TerminalApp: React.FC = () => {
   ]);
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const activeEventSources = useRef<EventSource[]>([]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [output]);
+
+  useEffect(() => {
+    return () => {
+      activeEventSources.current.forEach(es => es.close());
+    };
+  }, []);
 
   const handleCommand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +79,7 @@ export const TerminalApp: React.FC = () => {
     if (cmd === 'tail') {
         setOutput(prev => [...prev, "Streaming logs... Press Ctrl+C would stop (unimplemented), for now it streams 20 logs."]);
         const eventSource = new EventSource('/api/system/logs/stream');
+        activeEventSources.current.push(eventSource);
         let count = 0;
         eventSource.onmessage = (event) => {
             const log = JSON.parse(event.data);

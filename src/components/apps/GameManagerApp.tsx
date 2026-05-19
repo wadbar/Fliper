@@ -90,9 +90,9 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
     return () => { isMounted.current = false; };
   }, []);
 
-  const loadGames = useCallback(async () => {
+  const loadGames = useCallback(async (abortSignal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/games');
+      const res = await fetch('/api/games', { signal: abortSignal });
       const data = await res.json();
       if (!isMounted.current) return;
       if (data && data.length > 0) {
@@ -108,15 +108,20 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
            description: g.description || `From LaunchBox: ${g.title}`
         }));
         onGamesUpdate(mappedGames);
-        if (!selectedGame && mappedGames.length > 0) setSelectedGame(mappedGames[0]);
+        setSelectedGame(prev => {
+           if (!prev && mappedGames.length > 0) return mappedGames[0];
+           return prev;
+        });
       }
-    } catch(err) {
-      console.warn("API Call Failed, skipping...", err);
+    } catch(err: any) {
+      if (err.name !== 'AbortError') console.warn("API Call Failed, skipping...", err);
     }
-  }, [selectedGame, onGamesUpdate]);
+  }, [onGamesUpdate]);
 
   useEffect(() => {
-    loadGames();
+    const abortController = new AbortController();
+    loadGames(abortController.signal);
+    return () => abortController.abort();
   }, [loadGames]);
 
   // Elite Optimization: Memoized Scrape

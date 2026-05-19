@@ -106,7 +106,7 @@ export const KernelShellApp: React.FC = () => {
                  if (!authData.token) throw new Error('Authentication failed (No JWT)');
                  
                  // 2. Perform secured Kernel Execution
-                 const res = await fetch('/api/kernel/exec', {
+                 const res = await fetch('/api/system/kernel/exec', {
                    method: 'POST',
                    headers: { 
                      'Content-Type': 'application/json',

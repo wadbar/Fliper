@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Image as ImageIcon, RefreshCw, Wand2, Check, X, Loader2 } from 'lucide-react';
 
@@ -17,6 +17,11 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [style, setStyle] = useState('modern cinematic');
+
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const generateAIPrompt = useCallback(async () => {
     setIsGeneratingPrompt(true);
@@ -40,6 +45,7 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
       });
 
       const result = await response.json();
+      if (!isMountedRef.current) return;
 
       if (result.success) {
         setPrompt(result.content as string);
@@ -47,9 +53,9 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
          throw new Error(result.error || "Failed to reach neural core");
       }
     } catch (err: any) {
-      setError(err.message || "Prompt generation failed");
+      if (isMountedRef.current) setError(err.message || "Prompt generation failed");
     } finally {
-      setIsGeneratingPrompt(false);
+      if (isMountedRef.current) setIsGeneratingPrompt(false);
     }
   }, [gameTitle, genre, platform, style]);
 
@@ -69,6 +75,7 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
       });
 
       const result = await response.json();
+      if (!isMountedRef.current) return;
 
       if (result.success && result.url) {
         setPreviewUrl(result.url);
@@ -76,9 +83,9 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
         throw new Error(result.error || "Visualization node collapse");
       }
     } catch (err: any) {
-      setError(err.message || "Image generation failed");
+      if (isMountedRef.current) setError(err.message || "Image generation failed");
     } finally {
-      setIsGeneratingImage(false);
+      if (isMountedRef.current) setIsGeneratingImage(false);
     }
   }, [prompt]);
 

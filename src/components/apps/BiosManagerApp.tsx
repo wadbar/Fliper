@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Shield, CheckCircle2, AlertTriangle, FileSearch, Database, RefreshCcw } from 'lucide-react';
 
 interface BiosFile {
@@ -37,11 +37,20 @@ export const BiosManagerApp: React.FC = () => {
     }
   }, [files]);
 
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const scanBios = () => {
     setIsScanning(true);
     setFiles(prev => prev.map(f => ({ ...f, status: 'checking' })));
     
     setTimeout(() => {
+      if (!isMountedRef.current) return;
       setFiles(prev => prev.map(f => ({
         ...f,
         status: Math.random() > 0.3 ? 'valid' : 'missing'

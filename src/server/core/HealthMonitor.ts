@@ -63,7 +63,7 @@ export class HealthMonitor {
       uptime: os.uptime(),
       load: os.loadavg(),
       memory: Math.round((totalMem - freeMem) / 1024 / 1024) + "MB",
-      latency_score: Math.random() * 5, // Mock for real event loop lag tracking
+      latency_score: this.getEventLoopLag(),
       event_loop_lag: this.getEventLoopLag(),
       platform: process.platform,
       arch: process.arch,
