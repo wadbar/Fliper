@@ -33,7 +33,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   const [showGenerator, setShowGenerator] = useState(false);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
-  const [activeInfoTab, setActiveInfoTab] = useState<'info' | 'achievements' | '3d'>('info');
+  const [activeInfoTab, setActiveInfoTab] = useState<'info' | 'achievements' | '3d' | 'controller'>('info');
 
   React.useEffect(() => {
     if (isOpen && game && activeInfoTab === 'achievements' && achievements.length === 0) {
@@ -133,7 +133,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
               </button>
             </div>
 
-            <div className="px-8 pb-8 -mt-20 relative flex flex-col md:flex-row gap-8">
+             <div className="px-8 pb-8 -mt-20 relative flex flex-col md:flex-row gap-8">
               {/* Box Art */}
               <div className="w-48 shrink-0">
                 <div className="aspect-[3/4] rounded-lg overflow-hidden border border-zinc-700 shadow-2xl relative group">
@@ -214,10 +214,20 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                      onClick={handleVerifyIntegrity}
                      className="w-full flex items-center gap-3 px-4 py-2.5 bg-zinc-800/50 hover:bg-emerald-600/20 border border-zinc-700 hover:border-emerald-500/50 rounded-lg text-zinc-300 hover:text-emerald-300 transition-all group"
                    >
-                     <ShieldCheck size={16} className="group-hover:scale-110 transition-transform" />
+                     <ShieldCheck size={16} className="group-hover:scale-110 transition-transform text-emerald-400" />
                      <div className="text-left">
                         <p className="text-xs font-bold leading-none mb-1">Verify Integrity</p>
-                        <p className="text-[9px] text-zinc-500 font-medium">MD5/SHA1 Hash Match</p>
+                        <p className="text-[9px] text-zinc-500 font-medium whitespace-nowrap">MD5/SHA1 Hash Match</p>
+                     </div>
+                   </button>
+                   <button 
+                     onClick={() => setActiveInfoTab('controller')}
+                     className={`w-full flex items-center gap-3 px-4 py-2.5 bg-zinc-800/50 hover:bg-amber-600/20 border border-zinc-700 hover:border-amber-500/50 rounded-lg transition-all group ${activeInfoTab === 'controller' ? 'border-amber-500 text-amber-300' : 'text-zinc-300 hover:text-amber-300'}`}
+                   >
+                     <Zap size={16} className="group-hover:scale-110 transition-transform text-amber-400" />
+                     <div className="text-left">
+                        <p className="text-xs font-bold leading-none mb-1">Joypad Mapping</p>
+                        <p className="text-[9px] text-zinc-500 font-medium">Override Standard Input</p>
                      </div>
                    </button>
                 </div>
@@ -321,6 +331,35 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                       className="bg-zinc-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/10"
                     >
                        <ThreeDGameCartridge coverUrl={game.coverArt || ''} />
+                    </motion.div>
+                  ) : activeInfoTab === 'controller' ? (
+                    <motion.div 
+                      key="controller"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="space-y-4"
+                    >
+                       <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-4">
+                          <h3 className="text-xs font-bold text-white mb-4 uppercase tracking-widest flex items-center gap-2"><Zap size={14} className="text-amber-500" /> Per-Game Joypad Overrides</h3>
+                          <p className="text-[10px] text-zinc-500 mb-4">You can remap standard retro pad buttons specifically for {game.title}. This bypasses the global input configuration and injects directly into the core retroarch layer when launched.</p>
+                          
+                          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                             {['D-Pad Up', 'D-Pad Down', 'D-Pad Left', 'D-Pad Right', 'A Button (Right)', 'B Button (Down)', 'X Button (Top)', 'Y Button (Left)', 'L1 / L', 'R1 / R', 'Start', 'Select'].map(btn => (
+                               <div key={btn} className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                                  <span className="text-xs font-bold text-zinc-400">{btn}</span>
+                                  <button className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] rounded transition-colors uppercase tracking-widest">
+                                     Listen...
+                                  </button>
+                               </div>
+                             ))}
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-end gap-3">
+                             <button className="px-4 py-2 bg-transparent text-zinc-400 hover:text-white text-xs font-bold transition-colors">Reset Defaults</button>
+                             <button className="px-4 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600 hover:text-white rounded text-xs font-bold transition-colors">Save Override</button>
+                          </div>
+                       </div>
                     </motion.div>
                   ) : (
                     <motion.div 

@@ -363,7 +363,7 @@ export const FliperMode: React.FC<FliperModeProps> = ({
 
   useEffect(() => {
     let animationFrameId: number;
-    let lastGamepadState = { up: false, down: false, left: false, right: false, a: false, b: false, y: false };
+    let lastGamepadState = { up: false, down: false, left: false, right: false, a: false, b: false, y: false, x: false, options: false };
 
     const pollGamepad = () => {
       const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -377,6 +377,8 @@ export const FliperMode: React.FC<FliperModeProps> = ({
         const aBtn = gp.buttons[0]?.pressed;
         const bBtn = gp.buttons[1]?.pressed;
         const yBtn = gp.buttons[3]?.pressed;
+        const xBtn = gp.buttons[2]?.pressed;
+        const optBtn = gp.buttons[9]?.pressed;
 
         if (up && !lastGamepadState.up) handleNav('up');
         if (down && !lastGamepadState.down) handleNav('down');
@@ -395,14 +397,14 @@ export const FliperMode: React.FC<FliperModeProps> = ({
            toggleFavorite(activeGame.id);
         }
         // View Switches (X and Menu buttons)
-        if (gp.buttons[2]?.pressed && !lastGamepadState.x) { // X or Square
+        if (xBtn && !lastGamepadState.x) { // X or Square
            setActiveView(prev => prev === 'achievements' ? 'library' : 'achievements');
         }
-        if (gp.buttons[9]?.pressed && !lastGamepadState.options) { // Select/Options
+        if (optBtn && !lastGamepadState.options) { // Select/Options
            setActiveView(prev => prev === 'history' ? 'library' : 'history');
         }
 
-        lastGamepadState = { up, down, left, right, a: aBtn, b: bBtn, y: yBtn };
+        lastGamepadState = { up, down, left, right, a: !!aBtn, b: !!bBtn, y: !!yBtn, x: !!xBtn, options: !!optBtn };
       }
       animationFrameId = requestAnimationFrame(pollGamepad);
     };

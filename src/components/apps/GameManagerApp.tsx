@@ -439,7 +439,23 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
           ))}
         </div>
 
-        <div className="p-4 border-t border-[#2A2A2D]">
+         <div className="p-4 border-t border-[#2A2A2D]">
+           <button 
+              onClick={() => {
+                 // Simulate bulk ingestion
+                 setEnrichingIds(new Set(filteredGames.map(g => g.id)));
+                 filteredGames.forEach((g, idx) => {
+                    setTimeout(() => {
+                       handleAiScrape(g, true);
+                    }, idx * 250); // Stagger requests
+                 })
+                 alert('Bulk Metadata Scrape initiated for ' + filteredGames.length + ' titles.');
+              }}
+              title="Bulk Scrape Visible Playlist"
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600/10 border border-indigo-500/20 hover:bg-indigo-600/20 text-indigo-400 py-2 rounded-md text-xs font-bold transition-colors mb-2 tracking-wide uppercase"
+           >
+              <FolderSync size={14} /> Bulk Scrape Playlist
+           </button>
            <button 
               onClick={() => { if(selectedGame) handleAiScrape(selectedGame, true); }}
               disabled={enrichingIds.size > 0 || !selectedGame}

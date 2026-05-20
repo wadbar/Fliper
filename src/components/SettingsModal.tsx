@@ -70,8 +70,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
               <button onClick={() => setActiveTab('video')} className={`flex items-center gap-3 font-semibold w-full text-left transition-colors ${activeTab === 'video' ? 'text-amber-400' : 'text-zinc-400 hover:text-zinc-200'}`}>
                  <Monitor size={18} /> {t('video_driver')}
               </button>
+              <button onClick={() => setActiveTab('input')} className={`flex items-center gap-3 font-semibold w-full text-left transition-colors ${activeTab === 'input' ? 'text-cyan-400' : 'text-zinc-400 hover:text-zinc-200'}`}>
+                 <Gamepad2 size={18} /> Input & Controllers
+              </button>
+              <button onClick={() => setActiveTab('retroarch')} className={`flex items-center gap-3 font-semibold w-full text-left transition-colors ${activeTab === 'retroarch' ? 'text-rose-400' : 'text-zinc-400 hover:text-zinc-200'}`}>
+                 <Wrench size={18} /> RetroArch Global Config
+              </button>
               <button onClick={() => setActiveTab('paths')} className={`flex items-center gap-3 font-semibold w-full text-left transition-colors ${activeTab === 'paths' ? 'text-rose-400' : 'text-zinc-400 hover:text-zinc-200'}`}>
-                 <FolderOpen size={18} /> Storage & Drives
+                 <FolderOpen size={18} /> Storage & Mounts
               </button>
            </div>
         </div>
@@ -277,6 +283,120 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                         </div>
                       </div>
                     </div>
+                 </div>
+             )}
+
+             {activeTab === 'input' && (
+                 <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
+                     <div className="flex items-center gap-4 p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 mb-6">
+                        <Gamepad2 size={40} className="text-cyan-500 shrink-0" />
+                        <div>
+                           <h3 className="font-bold text-white">Input & Controller Subsystem</h3>
+                           <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Auto-configure joypads and latency</p>
+                        </div>
+                     </div>
+                     
+                     <div className="space-y-4">
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Controller API Engine</label>
+                        <select className="w-full bg-[#1A1A1D] border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 outline-none focus:border-indigo-500">
+                           <option value="sdl2">SDL2 Input (Modern & Cross-Platform)</option>
+                           <option value="xinput">XInput (Windows Elite Standard)</option>
+                           <option value="udev">udev (Linux Native Kernel Level)</option>
+                           <option value="dinput">DirectInput (Legacy Support)</option>
+                        </select>
+                     </div>
+
+                     <div className="space-y-4">
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Advanced Input Latency Overrides</label>
+                        <div className="p-4 bg-zinc-900/40 rounded-xl border border-zinc-800 space-y-4">
+                          <label className="flex items-center justify-between cursor-pointer group">
+                             <div>
+                                <h4 className="text-xs font-bold text-white mb-0.5 group-hover:text-cyan-400 transition-colors">Run-Ahead Engine</h4>
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-tight">Reduce perceived latency by simulating frames ahead</p>
+                             </div>
+                             <input type="checkbox" className="bg-black border-zinc-700 text-cyan-500 focus:ring-cyan-500 rounded" />
+                          </label>
+                          <label className="flex items-center justify-between cursor-pointer group pt-3 border-t border-zinc-800">
+                             <div>
+                                <h4 className="text-xs font-bold text-white mb-0.5 group-hover:text-cyan-400 transition-colors">Preemptive Frames</h4>
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-tight">Modern Run-Ahead Alternative (Requires high CPU)</p>
+                             </div>
+                             <input type="checkbox" defaultChecked className="bg-black border-zinc-700 text-cyan-500 focus:ring-cyan-500 rounded" />
+                          </label>
+                          <label className="flex items-center justify-between cursor-pointer group pt-3 border-t border-zinc-800">
+                             <div>
+                                <h4 className="text-xs font-bold text-white mb-0.5 group-hover:text-cyan-400 transition-colors">Poll Type Behavior</h4>
+                             </div>
+                             <select className="bg-black border border-zinc-700 text-xs text-zinc-300 rounded p-1">
+                               <option value="late">Late (Best for latency)</option>
+                               <option value="early">Early</option>
+                               <option value="normal">Normal</option>
+                             </select>
+                          </label>
+                        </div>
+                     </div>
+                 </div>
+             )}
+
+             {activeTab === 'retroarch' && (
+                 <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
+                     <div className="flex items-center gap-4 p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 mb-6">
+                        <Wrench size={40} className="text-rose-500 shrink-0" />
+                        <div>
+                           <h3 className="font-bold text-white">RetroArch Global Overrides</h3>
+                           <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Injects directly into retroarch.cfg</p>
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl">
+                           <h4 className="text-xs font-bold text-white mb-3 uppercase tracking-wider">Video API Binding</h4>
+                           <select className="w-full bg-black border border-zinc-700 text-xs rounded p-2 text-zinc-300 focus:border-rose-500">
+                              <option value="vulkan">Vulkan (Recommended)</option>
+                              <option value="glcore">glcore (OpenGL 3.2+)</option>
+                              <option value="gl">gl (Legacy OpenGL)</option>
+                              <option value="d3d11">Direct3D 11</option>
+                              <option value="d3d12">Direct3D 12</option>
+                              <option value="metal">Metal (macOS)</option>
+                           </select>
+                        </div>
+                        <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl">
+                           <h4 className="text-xs font-bold text-white mb-3 uppercase tracking-wider">Audio Driver</h4>
+                           <select className="w-full bg-black border border-zinc-700 text-xs rounded p-2 text-zinc-300 focus:border-rose-500">
+                              <option value="wasapi">WASAPI (Windows)</option>
+                              <option value="alsa">ALSA (Linux/SteamOS)</option>
+                              <option value="pulse">PulseAudio (Linux)</option>
+                              <option value="xaudio">XAudio (Legacy)</option>
+                              <option value="coreaudio">CoreAudio (Mac)</option>
+                           </select>
+                        </div>
+                        <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl">
+                           <h4 className="text-xs font-bold text-white mb-3 uppercase tracking-wider">Audio Resampler</h4>
+                           <select className="w-full bg-black border border-zinc-700 text-xs rounded p-2 text-zinc-300 focus:border-rose-500">
+                              <option value="sinc">Sinc (Highest Quality)</option>
+                              <option value="nearest">Nearest</option>
+                              <option value="cc">CC</option>
+                           </select>
+                        </div>
+                        <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col justify-center">
+                           <label className="flex items-center gap-3 cursor-pointer group">
+                             <input type="checkbox" defaultChecked className="bg-black border-zinc-700 text-rose-500 focus:ring-rose-500 rounded" />
+                             <span className="text-xs font-bold text-white group-hover:text-rose-400">Audio Sync (Prevent Crackling)</span>
+                           </label>
+                        </div>
+                        <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col justify-center">
+                           <label className="flex items-center gap-3 cursor-pointer group">
+                             <input type="checkbox" defaultChecked className="bg-black border-zinc-700 text-rose-500 focus:ring-rose-500 rounded" />
+                             <span className="text-xs font-bold text-white group-hover:text-rose-400">Save RAM Autosave Interval (10s)</span>
+                           </label>
+                        </div>
+                        <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col justify-center">
+                           <label className="flex items-center gap-3 cursor-pointer group">
+                             <input type="checkbox" defaultChecked className="bg-black border-zinc-700 text-rose-500 focus:ring-rose-500 rounded" />
+                             <span className="text-xs font-bold text-white group-hover:text-rose-400">Rewind Enable (Heavy CPU)</span>
+                           </label>
+                        </div>
+                     </div>
                  </div>
              )}
 
