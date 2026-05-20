@@ -5,7 +5,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { aiOrchestrator } from '../../services/ai/orchestrator';
 import { GameDetailsModal } from '../modals/GameDetailsModal';
+import { GameImportModal } from '../modals/GameImportModal';
 import Fuse from 'fuse.js';
+import { Plus } from 'lucide-react';
 
 interface GameManagerAppProps {
   gamesProp: Game[];
@@ -38,7 +40,7 @@ const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick, onEnric
     {playCount > 0 && (
       <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 border border-white/10 rounded backdrop-blur-md z-40">
          <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest flex items-center gap-1">
-            <Clock size={8} className="text-emerald-400" /> {playCount}nd Play
+            <Clock size={8} className="text-emerald-400" /> {playCount} Plays
          </span>
       </div>
     )}
@@ -147,6 +149,7 @@ const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick, onEnric
 export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGamesUpdate, onSwitchMode, favorites, toggleFavorite, stats, onRecordLaunch }) => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(gamesProp[0] || null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPlatform, setFilterPlatform] = useState('');
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
@@ -251,11 +254,17 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
                              !selectedGame.genre || 
                              selectedGame.genre === 'Unknown';
                              
-      if (needsEnrichment) {
+      if (needsEnrichment && !enrichingIds.has(selectedGame.id)) {
         handleAiScrape(selectedGame);
       }
     }
-  }, [selectedGame, handleAiScrape]);
+  }, [selectedGame, handleAiScrape, enrichingIds]);
+
+  const handleImportGame = useCallback((newGame: Game) => {
+    onGamesUpdate(prev => [newGame, ...prev]);
+    setSelectedGame(newGame);
+    // Optionally trigger cover search here if we had a service for it
+  }, [onGamesUpdate]);
   
   const handleUpdateCover = useCallback((gameId: string, newUrl: string) => {
     onGamesUpdate(prev => prev.map(g => g.id === gameId ? { ...g, coverArt: newUrl } : g));
@@ -337,6 +346,15 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
               return dateB - dateA;
             });
           return result; // Already sorted
+       } else if (filterPlatform === 'MOST_PLAYED') {
+          result = result
+            .filter(g => stats[g.id]?.playCount > 0)
+            .sort((a, b) => {
+              const countA = stats[a.id]?.playCount || 0;
+              const countB = stats[b.id]?.playCount || 0;
+              return countB - countA;
+            });
+          return result; // Already sorted
        } else if (filterPlatform === 'Japan Arcade') {
           result = result.filter(g => ['Arcade_JP', 'Naomi', 'NeoGeo'].includes(g.platform));
        } else {
@@ -386,11 +404,19 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         <div className="flex-1 overflow-y-auto py-4 space-y-1 scrollbar-hide">
           <div className="text-[10px] text-zinc-700 font-black px-5 py-2 uppercase tracking-[0.2em] flex items-center justify-between">
             {t('platforms')}
+            <button 
+              onClick={() => setIsImportModalOpen(true)}
+              className="p-1 hover:bg-white/10 rounded transition-colors text-indigo-400"
+              title="Manually ingest new title"
+            >
+              <Plus size={14} />
+            </button>
           </div>
           {[
             { id: '', label: t('all_games'), count: gamesProp.length, icon: <Database size={10} /> },
             { id: 'FAVORITES', label: 'Favorites', count: favorites.size, icon: <Heart size={10} className="fill-rose-500 text-rose-500" /> },
-            { id: 'RECENT', label: 'Recently Played', count: Object.keys(stats).length, icon: <Clock size={10} className="text-emerald-500" /> },
+            { id: 'RECENT', label: 'Recently Played', count: Object.values(stats).filter((s:any) => s.lastPlayed).length, icon: <Clock size={10} className="text-emerald-500" /> },
+            { id: 'MOST_PLAYED', label: 'Most Played', count: Object.values(stats).filter((s:any) => s.playCount > 0).length, icon: <Star size={10} className="text-amber-500" /> },
             { id: 'Japan Arcade', label: 'Japan Arcade', count: gamesProp.filter(g => ['Arcade_JP', 'Naomi', 'NeoGeo'].includes(g.platform)).length, icon: <Zap size={10} className="text-amber-500" /> },
             { id: 'SNES', label: 'Super Nintendo', count: gamesProp.filter(g => g.platform.includes('SNES')).length },
             { id: 'NES', label: 'NES', count: gamesProp.filter(g => g.platform.includes('NES')).length },
@@ -537,6 +563,7 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
                       <optgroup label="Metadata Filters">
                         <option value="FAVORITES">Collections: Favorites</option>
                         <option value="RECENT">Collections: Recent</option>
+                        <option value="MOST_PLAYED">Collections: Most Played</option>
                       </optgroup>
                       <optgroup label="Platform Library">
                         {platforms.map(p => (
@@ -637,6 +664,17 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
                        </div>
                        
                        <div className="flex items-center gap-4 shrink-0 px-4">
+                          <div className="text-right hidden sm:block w-24">
+                              {stats[game.id]?.playCount > 0 ? (
+                                <>
+                                  <div className="text-[10px] font-black text-amber-500">{stats[game.id].playCount} Plays</div>
+                                  <div className="text-[8px] font-mono text-zinc-500 uppercase">{stats[game.id].lastPlayed ? new Date(stats[game.id].lastPlayed.seconds * 1000).toLocaleDateString() : 'Never'}</div>
+                                </>
+                              ) : (
+                                <div className="text-[9px] font-mono text-zinc-700 uppercase">Unplayed</div>
+                              )}
+                          </div>
+                          <div className="w-px h-6 bg-zinc-800/80 mx-2" />
                           {isEnriching ? (
                              <Loader2 size={12} className="animate-spin text-indigo-400" />
                           ) : (
@@ -679,6 +717,12 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         isFavorite={selectedGame ? favorites.has(selectedGame.id) : false}
         onToggleFavorite={toggleFavorite}
         stats={selectedGame ? stats[selectedGame.id] : null}
+      />
+
+      <GameImportModal 
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleImportGame}
       />
     </div>
   );

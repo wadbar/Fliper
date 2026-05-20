@@ -22,13 +22,20 @@ export function useFirebaseSync() {
   const [stats, setStats] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
-  // Auth Listener
+  // Auth Listener & Local Storage Fallback
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (usr) => {
       setUser(usr);
       if (!usr) {
-        setFavorites(new Set());
-        setStats({});
+        try {
+          const localFavs = JSON.parse(localStorage.getItem('fliper_favorites') || '[]');
+          const localStats = JSON.parse(localStorage.getItem('fliper_stats') || '{}');
+          setFavorites(new Set(localFavs));
+          setStats(localStats);
+        } catch (e) {
+          setFavorites(new Set());
+          setStats({});
+        }
         setLoading(false);
       }
     });
@@ -75,7 +82,16 @@ export function useFirebaseSync() {
   const logout = () => signOut(auth);
 
   const toggleFavorite = async (gameId: string) => {
-    if (!user) return;
+    if (!user) {
+      setFavorites(prev => {
+        const next = new Set(prev);
+        if (next.has(gameId)) next.delete(gameId);
+        else next.add(gameId);
+        localStorage.setItem('fliper_favorites', JSON.stringify(Array.from(next)));
+        return next;
+      });
+      return;
+    }
     const favRef = doc(db, 'users', user.uid, 'favorites', gameId);
     if (favorites.has(gameId)) {
       await deleteDoc(favRef);
@@ -85,13 +101,27 @@ export function useFirebaseSync() {
   };
 
   const recordLaunch = async (gameId: string) => {
-    if (!user) return;
-    const statRef = doc(db, 'users', user.uid, 'stats', gameId);
     const current = stats[gameId] || { playCount: 0 };
+    const playCount = (current.playCount || 0) + 1;
+    
+    if (!user) {
+      const seconds = Math.floor(Date.now() / 1000);
+      setStats(prev => {
+        const next = {
+          ...prev,
+          [gameId]: { ...prev[gameId], gameId, playCount, lastPlayed: { seconds } }
+        };
+        localStorage.setItem('fliper_stats', JSON.stringify(next));
+        return next;
+      });
+      return;
+    }
+
+    const statRef = doc(db, 'users', user.uid, 'stats', gameId);
     
     await setDoc(statRef, {
       gameId,
-      playCount: (current.playCount || 0) + 1,
+      playCount,
       lastPlayed: serverTimestamp()
     }, { merge: true });
   };

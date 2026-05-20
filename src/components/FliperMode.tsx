@@ -100,6 +100,10 @@ export const FliperMode: React.FC<FliperModeProps> = ({
   const [isEnriching, setIsEnriching] = useState(false);
   const [metrics, setMetrics] = useState({ cpu: 0, ram: 0, mode: 'STABLE' });
 
+  const [activeView, setActiveView] = useState<'library' | 'achievements' | 'history' | 'settings'>('library');
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
+
   // Filter games based on selected platform and search query
   const platforms = useMemo(() => ['All', ...Array.from(new Set(gamesProp.map(g => g.platform)))].sort(), [gamesProp]);
   
@@ -118,6 +122,36 @@ export const FliperMode: React.FC<FliperModeProps> = ({
 
   // Initialize constraints
   const activeGame = filteredGames[selectedIndex] || filteredGames[0];
+
+  // Fetch Achievements
+  useEffect(() => {
+    if (activeView === 'achievements' && activeGame) {
+      const fetchAchievements = async () => {
+        setLoadingAchievements(true);
+        try {
+          const res = await fetch('/api/ai/achievements/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              title: activeGame.title, 
+              platform: activeGame.platform, 
+              gameId: activeGame.id 
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAchievements(data.list || []);
+          }
+        } catch (err) {
+          console.error("[Achievements] Fault:", err);
+        } finally {
+          setLoadingAchievements(false);
+        }
+      };
+      fetchAchievements();
+    }
+  }, [activeView, activeGame]);
+
   const enrichedGamesRef = useRef<Set<string>>(new Set());
 
   // ----------------------------------------------------------------------
@@ -354,10 +388,18 @@ export const FliperMode: React.FC<FliperModeProps> = ({
         }
         if (bBtn && !lastGamepadState.b) {
            audioEngine.playSelect();
-           onExit();
+           if (activeView !== 'library') setActiveView('library');
+           else onExit();
         }
         if (yBtn && !lastGamepadState.y && activeGame) {
            toggleFavorite(activeGame.id);
+        }
+        // View Switches (X and Menu buttons)
+        if (gp.buttons[2]?.pressed && !lastGamepadState.x) { // X or Square
+           setActiveView(prev => prev === 'achievements' ? 'library' : 'achievements');
+        }
+        if (gp.buttons[9]?.pressed && !lastGamepadState.options) { // Select/Options
+           setActiveView(prev => prev === 'history' ? 'library' : 'history');
         }
 
         lastGamepadState = { up, down, left, right, a: aBtn, b: bBtn, y: yBtn };
@@ -394,7 +436,14 @@ export const FliperMode: React.FC<FliperModeProps> = ({
       }
       else if (e.key === 'Escape' || e.key === 'Backspace') {
          audioEngine.playSelect();
-         onExit();
+         if (activeView !== 'library') setActiveView('library');
+         else onExit();
+      }
+      else if (e.key === 't') {
+         setActiveView(prev => prev === 'achievements' ? 'library' : 'achievements');
+      }
+      else if (e.key === 'r') {
+         setActiveView(prev => prev === 'history' ? 'library' : 'history');
       }
       else if (e.key === 'Enter') {
          launchGame();
@@ -453,8 +502,30 @@ export const FliperMode: React.FC<FliperModeProps> = ({
               </div>
            </div>
            
-           <div className="flex items-center gap-4">
-              <AnimatePresence>
+           <div className="flex items-center gap-8">
+              <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
+                 <button 
+                   onClick={() => setActiveView('library')}
+                   className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'library' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-white'}`}
+                 >
+                    LIBRARY
+                 </button>
+                 <button 
+                   onClick={() => setActiveView('achievements')}
+                   className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'achievements' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-white'}`}
+                 >
+                    ACHIEVEMENTS
+                 </button>
+                 <button 
+                   onClick={() => setActiveView('history')}
+                   className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-white'}`}
+                 >
+                    HISTORY
+                 </button>
+              </div>
+
+              <div className="flex items-center gap-4">
+                 <AnimatePresence>
                 {isSearchOpen && (
                   <motion.div
                     initial={{ opacity: 0, width: 0, x: 20 }}
@@ -526,146 +597,267 @@ export const FliperMode: React.FC<FliperModeProps> = ({
                    <span className="text-xs font-bold text-white tracking-widest">{metrics.mode}</span>
                 </div>
               </div>
+            </div>
            </div>
         </header>
 
         {/* Content Area */}
         <div className="flex-1 flex px-12 pb-12 gap-12 mt-8 overflow-hidden">
            
-           {/* Left Sidebar - Curved Wheel */}
-           <div className="w-1/4 flex flex-col gap-2 relative h-full">
-              <div className="flex-1 overflow-visible relative flex flex-col justify-center perspective-1000">
-                 {filteredGames.map((game, idx) => {
-                    const diff = idx - selectedIndex;
-                    // Extended window for smoother wheel curvature
-                    if (diff < -5 || diff > 6) return null;
-                    
-                    const isSelected = diff === 0;
-                    
-                    // V9: Wheel Curvature Calculation
-                    const rotateX = diff * -12; // Angle on the wheel
-                    const translateY = diff * 70; // Vertical spacing
-                    const translateZ = Math.abs(diff) * -40; // Depth for curve effect
-                    const opacity = Math.max(0, 1 - Math.abs(diff) * 0.2);
+           <AnimatePresence mode="wait">
+             {activeView === 'library' ? (
+               <motion.div 
+                 key="library"
+                 initial={{ opacity: 0, x: -20 }}
+                 animate={{ opacity: 1, x: 0 }}
+                 exit={{ opacity: 0, x: 20 }}
+                 className="flex-1 flex gap-12 h-full"
+               >
+                 {/* Left Sidebar - Curved Wheel */}
+                 <div className="w-1/4 flex flex-col gap-2 relative h-full">
+                    <div className="flex-1 overflow-visible relative flex flex-col justify-center perspective-1000">
+                       {filteredGames.map((game, idx) => {
+                          const diff = idx - selectedIndex;
+                          // Extended window for smoother wheel curvature
+                          if (diff < -5 || diff > 6) return null;
+                          
+                          const isSelected = diff === 0;
+                          
+                          // V9: Wheel Curvature Calculation
+                          const rotateX = diff * -12; // Angle on the wheel
+                          const translateY = diff * 70; // Vertical spacing
+                          const translateZ = Math.abs(diff) * -40; // Depth for curve effect
+                          const opacity = Math.max(0, 1 - Math.abs(diff) * 0.2);
+  
+                          const needsEnrichment = !game.description || game.description.length < 50 || !game.suggestedCore || !game.releaseYear || !game.genre;
+                          
+                          return (
+                            <motion.div
+                              key={game.id}
+                              initial={false}
+                              animate={{
+                                rotateX,
+                                y: translateY,
+                                z: translateZ,
+                                x: isSelected ? 40 : 0,
+                                opacity,
+                                scale: isSelected ? 1.1 : 0.9,
+                              }}
+                              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                              onClick={() => {
+                                audioEngine.playNav();
+                                setSelectedIndex(idx);
+                              }}
+                              className={`py-3 px-6 rounded-xl cursor-pointer absolute w-full transition-all duration-300 ${
+                                isSelected 
+                                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-800 shadow-[0_0_50px_rgba(79,70,229,0.4)] border-y border-white/20' 
+                                  : 'hover:bg-white/5 border border-transparent'
+                              }`}
+                              style={{ backfaceVisibility: 'hidden' }}
+                            >
+                               <h2 className={`font-black uppercase tracking-[0.15em] truncate py-1 flex items-center justify-between ${isSelected ? 'text-xl text-white' : 'text-lg text-zinc-500'}`}>
+                                 {game.title}
+                                 <div className="flex items-center gap-2">
+                                   {stats[game.id]?.playCount > 0 && (
+                                     <span className="text-[9px] font-black text-emerald-400/80 bg-emerald-500/10 px-1 rounded border border-emerald-500/20">
+                                       {stats[game.id].playCount}x
+                                     </span>
+                                   )}
+                                   {favorites.has(game.id) && <Heart size={14} className="fill-rose-500 text-rose-500" />}
+                                   {isSelected && isEnriching ? (
+                                     <div className="flex items-center gap-1.5 ml-2">
+                                       <Loader2 size={12} className="animate-spin text-white" />
+                                       <Sparkles size={10} className="text-indigo-300 animate-pulse" />
+                                     </div>
+                                   ) : (
+                                     <>
+                                       {!needsEnrichment && (
+                                         <CheckCircle2 size={14} className="text-emerald-500 opacity-60" />
+                                       )}
+                                     </>
+                                   )}
+                                 </div>
+                               </h2>
+                            </motion.div>
+                          );
+                       })}
+                    </div>
+                 </div>
 
-                    const needsEnrichment = !game.description || game.description.length < 50 || !game.suggestedCore || !game.releaseYear || !game.genre;
-                    
-                    return (
-                      <motion.div
-                        key={game.id}
-                        initial={false}
-                        animate={{
-                          rotateX,
-                          y: translateY,
-                          z: translateZ,
-                          x: isSelected ? 40 : 0,
-                          opacity,
-                          scale: isSelected ? 1.1 : 0.9,
-                        }}
-                        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                        onClick={() => {
-                          audioEngine.playNav();
-                          setSelectedIndex(idx);
-                        }}
-                        className={`py-3 px-6 rounded-xl cursor-pointer absolute w-full transition-all duration-300 ${
-                          isSelected 
-                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-800 shadow-[0_0_50px_rgba(79,70,229,0.4)] border-y border-white/20' 
-                            : 'hover:bg-white/5 border border-transparent'
-                        }`}
-                        style={{ backfaceVisibility: 'hidden' }}
-                      >
-                         <h2 className={`font-black uppercase tracking-[0.15em] truncate py-1 flex items-center justify-between ${isSelected ? 'text-xl text-white' : 'text-lg text-zinc-500'}`}>
-                           {game.title}
-                           <div className="flex items-center gap-2">
-                             {favorites.has(game.id) && <Heart size={14} className="fill-rose-500 text-rose-500" />}
-                             {isSelected && isEnriching ? (
-                               <div className="flex items-center gap-1.5 ml-2">
-                                 <Loader2 size={12} className="animate-spin text-white" />
-                                 <Sparkles size={10} className="text-indigo-300 animate-pulse" />
+                 {/* Right Area - Big Box Cinematic Spread */}
+                 <div className="flex-1 flex flex-col justify-center items-end pr-8">
+                    <AnimatePresence mode="wait">
+                       <motion.div
+                          key={activeGame?.id}
+                          initial={{ opacity: 0, x: 50, filter: 'blur(10px)' }}
+                          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                          exit={{ opacity: 0, x: -50, filter: 'blur(10px)' }}
+                          transition={{ duration: 0.5, ease: "circOut" }}
+                          className="flex flex-col items-end text-right max-w-3xl"
+                       >
+                          {/* Platform Logo-style Badge */}
+                          <div className="flex items-center gap-3 mb-4">
+                             <div className="flex flex-col items-start text-left mr-6">
+                                <span className="text-[10px] font-black tracking-[0.5em] text-zinc-500 uppercase">Publisher</span>
+                                <span className="text-xl font-bold text-zinc-300 uppercase tracking-tighter italic">{activeGame?.developer}</span>
+                             </div>
+                             <div className="w-1.5 h-10 bg-indigo-500" />
+                             <div className="flex flex-col items-start text-left">
+                                <span className="text-[10px] font-black tracking-[0.5em] text-zinc-500 uppercase">Platform Architecture</span>
+                                <span className="text-xl font-bold text-white uppercase tracking-tighter italic">{activeGame?.platform}</span>
+                             </div>
+                          </div>
+
+                          <h2 className="text-8xl font-black italic tracking-tighter leading-none mb-8 drop-shadow-2xl text-white uppercase">
+                             {activeGame?.title}
+                          </h2>
+
+                          {/* Metadata Grid */}
+                          <div className="grid grid-cols-5 gap-8 mb-12 bg-black/60 backdrop-blur-3xl px-10 py-6 rounded-3xl border border-white/5 shadow-2xl skew-x-[-10deg]">
+                             <div className="flex flex-col items-center skew-x-[10deg]">
+                                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Established</span>
+                                <span className="font-mono text-2xl font-black text-white">{activeGame?.releaseYear}</span>
+                             </div>
+                             <div className="flex flex-col items-center skew-x-[10deg]">
+                                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Genre</span>
+                                <span className="font-mono text-lg font-black text-indigo-400 truncate max-w-[100px] text-center">{activeGame?.genre}</span>
+                             </div>
+                             <div className="flex flex-col items-center skew-x-[10deg]">
+                                <span className="text-[9px] text-emerald-500 uppercase tracking-widest font-black mb-1">CPU Core</span>
+                                <span className="font-mono text-lg font-black text-emerald-400">{activeGame?.suggestedCore || 'MAME'}</span>
+                             </div>
+                             <div className="flex flex-col items-center skew-x-[10deg]">
+                                <span className="text-[9px] text-amber-500 uppercase tracking-widest font-black mb-1">Cycles</span>
+                                <span className="font-mono text-xl font-black text-amber-400">{stats[activeGame?.id]?.playCount || 0}</span>
+                             </div>
+                             <div className="flex flex-col items-center skew-x-[10deg]">
+                                <span className="text-[9px] text-rose-500 uppercase tracking-widest font-black mb-1">Last Log</span>
+                                <span className="font-mono text-xs font-black text-rose-400">
+                                   {stats[activeGame?.id]?.lastPlayed ? new Date(stats[activeGame.id].lastPlayed.seconds * 1000).toLocaleDateString() : 'NEVER'}
+                                </span>
+                             </div>
+                          </div>
+
+                          <div className="flex flex-col items-end">
+                             <p className="text-zinc-400 text-xl leading-snug italic max-w-xl font-medium mb-12 drop-shadow-lg">
+                                {activeGame?.description || "Initializing system description matrix..."}
+                             </p>
+
+                             <div className="relative group">
+                                <motion.div
+                                  animate={{ 
+                                    rotateY: [-5, 5],
+                                    rotateX: [2, -2],
+                                  }}
+                                  transition={{ duration: 4, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                                  className="w-80 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/20 transform-gpu"
+                                >
+                                   <img src={activeGame?.coverArt} className="w-full h-full object-cover" />
+                                   <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none" />
+                                </motion.div>
+                             </div>
+                          </div>
+                       </motion.div>
+                    </AnimatePresence>
+                 </div>
+               </motion.div>
+             ) : activeView === 'achievements' ? (
+               <motion.div 
+                 key="achievements"
+                 initial={{ opacity: 0, scale: 0.95 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 exit={{ opacity: 0, scale: 0.95 }}
+                 className="flex-1 flex flex-col items-center justify-center"
+               >
+                 <div className="flex items-center gap-6 mb-12">
+                    <Trophy size={64} className="text-amber-500" />
+                    <div className="text-left">
+                       <h2 className="text-5xl font-black italic tracking-tighter uppercase text-white">Neural Trophies</h2>
+                       <p className="text-zinc-500 font-mono tracking-widest uppercase text-xs mt-1">Acquired from AI synthesis of: {activeGame?.title}</p>
+                    </div>
+                 </div>
+
+                 {loadingAchievements ? (
+                   <div className="flex flex-col items-center gap-4 text-zinc-600">
+                      <Loader2 size={32} className="animate-spin text-amber-500" />
+                      <p className="font-mono text-xs uppercase animate-pulse">Consulting World Records Metadata...</p>
+                   </div>
+                 ) : (
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+                      {achievements.map((ach, i) => (
+                         <motion.div 
+                           key={ach.id || i}
+                           initial={{ opacity: 0, y: 20 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           transition={{ delay: i * 0.1 }}
+                           className="p-6 bg-zinc-900/60 border border-white/5 rounded-3xl backdrop-blur-3xl group hover:border-amber-500/30 transition-all cursor-pointer"
+                         >
+                            <div className="flex items-start justify-between mb-4">
+                               <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-black transition-all">
+                                  <Zap size={24} />
                                </div>
-                             ) : (
-                               <>
-                                 {!needsEnrichment && (
-                                   <CheckCircle2 size={14} className="text-emerald-500 opacity-60" />
-                                 )}
-                               </>
-                             )}
-                           </div>
-                         </h2>
-                      </motion.div>
-                    );
-                 })}
-              </div>
-           </div>
-
-           {/* Right Area - Big Box Cinematic Spread */}
-           <div className="flex-1 flex flex-col justify-center items-end pr-8">
-              <AnimatePresence mode="wait">
-                 <motion.div
-                    key={activeGame?.id}
-                    initial={{ opacity: 0, x: 50, filter: 'blur(10px)' }}
-                    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                    exit={{ opacity: 0, x: -50, filter: 'blur(10px)' }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
-                    className="flex flex-col items-end text-right max-w-3xl"
-                 >
-                    {/* Platform Logo-style Badge */}
-                    <div className="flex items-center gap-3 mb-4">
-                       <div className="w-1.5 h-10 bg-indigo-500" />
-                       <div className="flex flex-col items-start text-left">
-                          <span className="text-[10px] font-black tracking-[0.5em] text-zinc-500 uppercase">Platform Architecture</span>
-                          <span className="text-xl font-bold text-white uppercase tracking-tighter italic">{activeGame?.platform}</span>
-                       </div>
-                    </div>
-
-                    <h2 className="text-8xl font-black italic tracking-tighter leading-none mb-8 drop-shadow-2xl text-white uppercase">
-                       {activeGame?.title}
-                    </h2>
-
-                    {/* Metadata Grid Inspired by Big Box Cinematic Themes */}
-                    <div className="grid grid-cols-4 gap-12 mb-12 bg-black/60 backdrop-blur-3xl px-12 py-6 rounded-3xl border border-white/5 shadow-2xl skew-x-[-10deg]">
-                       <div className="flex flex-col items-center skew-x-[10deg]">
-                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Established</span>
-                          <span className="font-mono text-2xl font-black text-white">{activeGame?.releaseYear}</span>
-                       </div>
-                       <div className="flex flex-col items-center skew-x-[10deg]">
-                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Genre</span>
-                          <span className="font-mono text-lg font-black text-indigo-400 truncate max-w-[100px] text-center">{activeGame?.genre}</span>
-                       </div>
-                       <div className="flex flex-col items-center skew-x-[10deg]">
-                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Developer</span>
-                          <span className="font-mono text-lg font-black text-zinc-300 truncate max-w-[120px] text-center">{activeGame?.developer}</span>
-                       </div>
-                       <div className="flex flex-col items-center skew-x-[10deg]">
-                          <span className="text-[9px] text-emerald-500 uppercase tracking-widest font-black mb-1">CPU Core</span>
-                          <span className="font-mono text-lg font-black text-emerald-400">{activeGame?.suggestedCore || 'MAME'}</span>
-                       </div>
-                    </div>
-
-                    <div className="flex flex-col items-end">
-                       <p className="text-zinc-400 text-xl leading-snug italic max-w-xl font-medium mb-12 drop-shadow-lg">
-                          {activeGame?.description || "Initializing system description matrix..."}
+                               <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${
+                                  ach.difficulty === 'legendary' ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-400'
+                               }`}>{ach.difficulty}</span>
+                            </div>
+                            <h3 className="text-lg font-black text-white mb-2 uppercase tracking-tight">{ach.title}</h3>
+                            <p className="text-zinc-500 text-xs leading-relaxed">{ach.description}</p>
+                         </motion.div>
+                      ))}
+                   </div>
+                 )}
+               </motion.div>
+             ) : (
+               <motion.div 
+                 key="history"
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: -20 }}
+                 className="flex-1 overflow-y-auto custom-scrollbar pr-4"
+               >
+                 <div className="flex items-center gap-6 mb-12 px-4">
+                    <Clock size={64} className="text-indigo-400" />
+                    <div className="text-left">
+                       <h2 className="text-5xl font-black italic tracking-tighter uppercase text-white">Execution Logs</h2>
+                       <p className="text-zinc-500 font-mono tracking-widest uppercase text-xs mt-1">
+                          {Object.values(stats).reduce((acc: number, curr: any) => acc + (curr.playCount || 0), 0)} Sessions Registered in Neural Core
                        </p>
-
-                       {/* Large Box Art Hovering Perspective */}
-                       <div className="relative group">
-                          <motion.div
-                            animate={{ 
-                              rotateY: [-5, 5],
-                              rotateX: [2, -2],
-                            }}
-                            transition={{ duration: 4, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
-                            className="w-80 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/20 transform-gpu"
-                          >
-                             <img src={activeGame?.coverArt} className="w-full h-full object-cover" />
-                             {/* Scanline overlay on the box art for retro feel */}
-                             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none" />
-                          </motion.div>
-                       </div>
                     </div>
-                 </motion.div>
-              </AnimatePresence>
-           </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.values(stats).sort((a: any, b: any) => (b.lastPlayed?.seconds || 0) - (a.lastPlayed?.seconds || 0)).map((stat: any) => {
+                       const game = gamesProp.find(g => g.id === stat.gameId);
+                       if (!game) return null;
+                       return (
+                          <div 
+                            key={stat.gameId}
+                            className="bg-zinc-900/40 border border-white/5 p-4 rounded-2xl flex gap-6 hover:bg-zinc-900/60 transition-all border-l-4 border-l-indigo-600"
+                          >
+                             <img src={game.coverArt} className="w-20 h-28 object-cover rounded shadow-lg" />
+                             <div className="flex-1 flex flex-col justify-between">
+                                <div>
+                                   <h3 className="text-xl font-bold text-white mb-1 uppercase tracking-tight">{game.title}</h3>
+                                   <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest italic">{game.platform}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 mt-4">
+                                   <div>
+                                      <p className="text-[8px] font-black text-zinc-600 uppercase mb-1">Total Cycles</p>
+                                      <p className="text-lg font-mono text-white">{stat.playCount} launches</p>
+                                   </div>
+                                   <div>
+                                      <p className="text-[8px] font-black text-zinc-600 uppercase mb-1">Last Sync</p>
+                                      <p className="text-xs font-mono text-zinc-400">{stat.lastPlayed?.seconds ? new Date(stat.lastPlayed.seconds * 1000).toLocaleDateString() : 'Unknown'}</p>
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
+                       );
+                    })}
+                 </div>
+               </motion.div>
+             )}
+           </AnimatePresence>
            
         </div>
 
@@ -673,8 +865,12 @@ export const FliperMode: React.FC<FliperModeProps> = ({
         <div className="bg-[#090909] border-t border-white/5 py-3 px-12 flex justify-between items-center fixed bottom-0 left-0 right-0 z-50">
            <div className="flex gap-8">
                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs text-white border border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]">F</div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Search</span>
+                  <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs text-white border border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]">T</div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Trophies</span>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center font-bold text-xs text-white border border-zinc-400 shadow-[0_0_10px_rgba(255,255,255,0.1)]">R</div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">History</span>
                </div>
                <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-black border border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]">A</div>
