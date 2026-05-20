@@ -131,7 +131,18 @@ export async function generate({ prompt, systemInstruction = '', responseType = 
     });
 
     const isHeavy = prompt.length > 1500 || responseType === 'json';
-    if (isHeavy) nodes.sort((a,b) => (a.id === 'ollama' ? 1 : b.id === 'ollama' ? -1 : 0));
+    
+    // Detect AI Studio Development Environment (Native Gemini Injection)
+    const isNativeAIEnv = !!process.env.GEMINI_API_KEY && process.env.NODE_ENV !== 'production';
+
+    // Core Routing Logic: Prioritize Native AI Power in Dev, otherwise respect heavy local processing
+    if (isNativeAIEnv) {
+        // Native AI Studio: Gemini takes absolute priority
+        nodes.sort((a,b) => (a.id === 'gemini' ? -1 : b.id === 'gemini' ? 1 : 0));
+    } else if (isHeavy && nodes.some(n => n.id === 'ollama')) {
+        // Outside AI Studio (e.g. self-hosted production): Offload heavy prompts to local Ollama if available
+        nodes.sort((a,b) => (a.id === 'ollama' ? -1 : b.id === 'ollama' ? 1 : 0));
+    }
 
     const results = { success: false, provider: null, content: null, timestamp: new Date().toISOString() };
     

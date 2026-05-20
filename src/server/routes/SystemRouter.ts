@@ -10,7 +10,9 @@ import { BuildObserver } from "../core/BuildObserver";
 import { KernelProxy } from "../core/KernelProxy";
 import fs from "fs";
 import path from "path";
+import multer from "multer";
 
+const upload = multer({ dest: path.join(process.cwd(), 'database', 'temp_imports') });
 const router = Router();
 
 router.get("/health", (req, res) => {
@@ -125,12 +127,50 @@ router.get("/download/status", (req, res) => {
 
 router.post("/download", (req, res) => {
     try {
-        const { type, name } = req.body;
+        const { type, name, url } = req.body;
         const sanitize = (val: any) => String(val).replace(/[^a-zA-Z0-9.\-_]/g, '');
-        const task = queueManager.addTask(sanitize(type), sanitize(name));
+        const task = queueManager.addTask(sanitize(type), sanitize(name), url ? { url } : undefined);
         res.json({ status: "ok", task });
     } catch (err: any) {
         res.status(429).json({ error: err.message });
+    }
+});
+
+router.post("/import", upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) throw new Error("File not found in payload");
+        
+        const fileType = req.body.type || 'import_rom';
+        const safeName = req.file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        
+        const dbPath = path.join(process.cwd(), 'database');
+        await fs.promises.mkdir(dbPath, { recursive: true });
+        
+        const finalPath = path.join(dbPath, safeName);
+        await fs.promises.rename(req.file.path, finalPath);
+        
+        logger.info(`Asset imported manually: ${safeName}`);
+        
+        // Register in the system queue as an indexing task instead of download
+        queueManager.addTask('rom_validation', safeName, { romPath: `database/${safeName}` });
+        
+        res.json({ status: "ok", file: safeName, path: finalPath });
+    } catch(err: any) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+router.post("/config/emulators", async (req, res) => {
+    try {
+        const config = req.body;
+        const configPath = path.join(process.cwd(), 'database', 'emulators_config.json');
+        await fs.promises.mkdir(path.join(process.cwd(), 'database'), { recursive: true });
+        await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2));
+        
+        logger.info("Kernel received new emulator configurations");
+        res.json({ status: "ok", config });
+    } catch(err: any) {
+        res.status(500).json({ error: err.message });
     }
 });
 

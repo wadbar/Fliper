@@ -44,9 +44,8 @@ export const KernelShellApp: React.FC = () => {
     setIsProcessing(true);
 
     try {
-       // Simulate local heuristics analysis for "The sky is the limit" feel
-       addLog('system', 'LOCAL_ANALYSIS: Analyzing semantic patterns...');
-       setTimeout(() => addLog('system', 'LOCAL_ANALYSIS: No internet required for intent resolution.'), 200);
+       // Real Network Telemetry Log
+       addLog('system', 'NET_DISPATCH: Opening secure semantic tunnel...');
 
        // AI Processed Command via backend API
        const aiRes = await fetch('/api/ai/intent', {
@@ -54,7 +53,8 @@ export const KernelShellApp: React.FC = () => {
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ prompt: userQuery })
        });
-       if (!aiRes.ok) throw new Error("API Failure");
+       
+       if (!aiRes.ok) throw new Error(`API_FAULT: ${aiRes.status}`);
        const intent = await aiRes.json();
        
        if (intent.acao === 'error') {
@@ -76,58 +76,60 @@ export const KernelShellApp: React.FC = () => {
           }
        } else {
           addLog('ai', intent.resumo_ia);
+          addLog('system', `ID_INTENT: [${intent.acao}] | TARGET: [${intent.categoria}] | QUERY: [${intent.termo_busca}]`);
           
-          // Technical summary of what the kernel identified
-          setTimeout(async () => {
-            addLog('system', `ID_INTENT: [${intent.acao}] | TARGET: [${intent.categoria}] | QUERY: [${intent.termo_busca}]`);
-            
-            // IPC DISPATCH
-            if (intent.acao === 'download') {
-               dispatch('trigger_download', { query: intent.termo_busca, category: intent.categoria });
-               dispatch('open_window', 'store');
-            } else if (intent.acao === 'search') {
-               dispatch('trigger_search', { query: intent.termo_busca, category: intent.categoria });
-               dispatch('open_window', 'store');
-            } else if (intent.acao === 'launch') {
-               dispatch('open_window', 'gameManager');
-            } else if (intent.acao === 'settings') {
-               dispatch('open_window', 'settings');
-            } else if (intent.acao === 'sys_report') {
-               // Execute real system command if applicable
-               try {
-                 // 1. Authenticate to get JWT token
-                 const authRes = await fetch('/api/auth', {
-                   method: 'POST',
-                   headers: { 'Content-Type': 'application/json' },
-                   body: JSON.stringify({ username: 'admin', password: 'admin' })
-                 });
-                 const authData = await authRes.json();
-                 
-                 if (!authData.token) throw new Error('Authentication failed (No JWT)');
-                 
-                 // 2. Perform secured Kernel Execution
-                 const res = await fetch('/api/system/kernel/exec', {
-                   method: 'POST',
-                   headers: { 
-                     'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${authData.token}`
-                   },
-                   body: JSON.stringify({ command: 'uptime' }) // Simplified for demo
-                 });
-                 const data = await res.json();
-                 if (data.output) {
-                   addLog('system', `OUTPUT: ${data.output.split('\n')[0]}`);
-                 } else if (data.error) {
-                   addLog('error', `KERNEL_ERR: ${data.error}`);
-                 }
-               } catch (e: any) {
-                 addLog('error', `Falha ao acessar subsystem de telemetria: ${e.message}`);
+          // IPC DISPATCH
+          if (intent.acao === 'download') {
+             dispatch('trigger_download', { query: intent.termo_busca, category: intent.categoria });
+             dispatch('open_window', 'store');
+          } else if (intent.acao === 'search') {
+             dispatch('trigger_search', { query: intent.termo_busca, category: intent.categoria });
+             dispatch('open_window', 'store');
+          } else if (intent.acao === 'launch') {
+             dispatch('open_window', 'gameManager');
+          } else if (intent.acao === 'settings') {
+             dispatch('open_window', 'settings');
+          } else if (intent.acao === 'sys_report') {
+             // Execute real system command matrix
+             try {
+               // 1. Authenticate to get JWT token
+               const authRes = await fetch('/api/auth', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ username: 'admin', password: 'admin' })
+               });
+               
+               if (!authRes.ok) throw new Error(`AUTH_FAULT: ${authRes.status}`);
+               const authData = await authRes.json();
+               
+               if (!authData.token) throw new Error('Authentication failed (No JWT allocated)');
+               
+               // 2. Perform secured Kernel Execution
+               const res = await fetch('/api/system/kernel/exec', {
+                 method: 'POST',
+                 headers: { 
+                   'Content-Type': 'application/json',
+                   'Authorization': `Bearer ${authData.token}`
+                 },
+                 body: JSON.stringify({ command: 'uptime && free -m && df -h /' })
+               });
+               
+               if (!res.ok) throw new Error(`EXEC_FAULT: ${res.status}`);
+               const data = await res.json();
+               
+               if (data.output) {
+                 const lines = data.output.split('\n');
+                 lines.forEach((l: string) => { if (l.trim()) addLog('system', `> ${l.trim()}`) });
+               } else if (data.error) {
+                 addLog('error', `KERNEL_ERR: ${data.error}`);
                }
-            }
-          }, 400);
+             } catch (e: any) {
+               addLog('error', `Falha ao acessar subsystem de telemetria: ${e.message}`);
+             }
+          }
        }
-    } catch (err) {
-       addLog('error', 'Kernel Exception: IPC_TIMEOUT. Verifique sua conexão.');
+    } catch (err: any) {
+       addLog('error', `Kernel Exception: IPC_TIMEOUT or Pipeline Fault (${err.message}). Verifique sua conexão.`);
     } finally {
        setIsProcessing(false);
     }

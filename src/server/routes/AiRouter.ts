@@ -75,12 +75,18 @@ router.post("/enrich", async (req, res) => {
         
         // V9 CACHE LAYER: Check Firestore first
         const gameId = `${title}_${platform}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const { adminDb } = await import("../lib/firebase-admin");
         
-        const cachedDoc = await adminDb.collection('games').doc(gameId).get();
-        if (cachedDoc.exists) {
-            console.log(`[AI_CACHE] Hit for ${title} (${platform})`);
-            return res.json(cachedDoc.data());
+        try {
+            const { adminDb } = await import("../lib/firebase-admin");
+            const cachedDoc = await adminDb.collection('games').doc(gameId).get();
+            if (cachedDoc.exists) {
+                console.log(`[AI_CACHE] Hit for ${title} (${platform})`);
+                return res.json(cachedDoc.data());
+            }
+        } catch (dbErr: any) {
+            if (dbErr?.code !== 5 && !dbErr?.message?.includes('NOT_FOUND')) {
+                console.warn(`[AI_CACHE] Bypass due to DB fault:`, dbErr);
+            }
         }
 
         const { generate } = await import("../../services/aiEngine.mjs");
@@ -109,20 +115,29 @@ router.post("/enrich", async (req, res) => {
 
         if (result.success) {
             // Background Save to Firestore (don't block response)
-            adminDb.collection('games').doc(gameId).set({
-                id: gameId,
-                title,
-                platform,
-                ...result.content,
-                year: result.content.year || null, // Ensure string/int compatibility if needed
-                syncedAt: new Date().toISOString()
-            }).catch(err => console.error("[AI_CACHE] Save Error", err));
+            import("../lib/firebase-admin")
+                .then(({ adminDb }) => {
+                    adminDb.collection('games').doc(gameId).set({
+                        id: gameId,
+                        title,
+                        platform,
+                        ...result.content,
+                        year: result.content.year || null, // Ensure string/int compatibility if needed
+                        syncedAt: new Date().toISOString()
+                    }).catch((err: any) => {
+                        if (err?.code !== 5 && !err?.message?.includes('NOT_FOUND')) {
+                            console.error("[AI_CACHE] Save Error", err);
+                        }
+                    });
+                })
+                .catch(err => console.error("[AI_CACHE] Import Error", err));
 
             res.json(result.content);
         } else {
-            res.status(500).json({ error: "ENRICHMENT_FAULT" });
+            res.status(500).json({ error: "ENRICHMENT_FAULT", details: result });
         }
     } catch (e: any) {
+        console.error("[AiRouter] /enrich global fault:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -277,12 +292,17 @@ router.get("/telemetry", (req, res) => {
 router.post("/achievements/generate", async (req, res) => {
     try {
         const { title, platform, gameId } = req.body;
-        const { adminDb } = await import("../lib/firebase-admin");
-
-        // Check global cache first
-        const cacheRef = adminDb.collection('games').doc(gameId).collection('meta').doc('achievements');
-        const cached = await cacheRef.get();
-        if (cached.exists) return res.json(cached.data());
+        
+        try {
+            const { adminDb } = await import("../lib/firebase-admin");
+            const cacheRef = adminDb.collection('games').doc(gameId).collection('meta').doc('achievements');
+            const cached = await cacheRef.get();
+            if (cached.exists) return res.json(cached.data());
+        } catch (dbErr: any) {
+            if (dbErr?.code !== 5 && !dbErr?.message?.includes('NOT_FOUND')) {
+                console.warn(`[AI_ACHIEVEMENTS] Bypass due to DB fault:`, dbErr);
+            }
+        }
 
         const { generate } = await import("../../services/aiEngine.mjs");
         
@@ -298,12 +318,22 @@ router.post("/achievements/generate", async (req, res) => {
 
         if (result.success) {
             const achievements = { list: result.content.list || result.content, generatedAt: new Date().toISOString() };
-            await cacheRef.set(achievements).catch(err => console.error("[AI_ACHIEVEMENTS] Save Error", err));
+            import("../lib/firebase-admin")
+                .then(({ adminDb }) => {
+                    const cacheRef = adminDb.collection('games').doc(gameId).collection('meta').doc('achievements');
+                    cacheRef.set(achievements).catch((err: any) => {
+                        if (err?.code !== 5 && !err?.message?.includes('NOT_FOUND')) {
+                            console.error("[AI_ACHIEVEMENTS] Save Error", err);
+                        }
+                    });
+                })
+                .catch(err => console.error("[AI_ACHIEVEMENTS] Import Error", err));
             res.json(achievements);
         } else {
-            res.status(500).json({ error: "GEN_FAIL" });
+            res.status(500).json({ error: "GEN_FAIL", details: result });
         }
     } catch (e: any) {
+        console.error("[AiRouter] /achievements/generate global fault:", e);
         res.status(500).json({ error: e.message });
     }
 });
