@@ -176,40 +176,42 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-[#0F0F11] font-sans text-white overflow-hidden flex flex-col relative select-none">
+    <div className="fixed inset-0 bg-m3-surface font-sans text-m3-on-surface overflow-hidden flex flex-col relative select-none">
       <CrtOverlay />
 
       {/* Desktop Background / Wallpaper */}
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=2560&q=80')] bg-cover bg-center opacity-20" />
-      <div className="absolute inset-0 bg-gradient-to-tr from-black/90 via-black/40 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=2560&q=80')] bg-cover bg-center opacity-10" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-m3-surface via-m3-surface/60 to-transparent pointer-events-none" />
       
       {/* Quick Access Tiles - Jump Back In */}
-      <div className="absolute bottom-20 left-12 right-12 z-0 hidden lg:block">
-         <div className="flex items-center gap-3 mb-4">
-            <History size={18} className="text-emerald-500" />
-            <h3 className="text-sm font-black text-white italic tracking-tighter uppercase">Jump Back In</h3>
+      <div className="absolute bottom-24 left-12 right-12 z-0 hidden lg:block">
+         <div className="flex items-center gap-4 mb-5 px-2">
+            <div className="w-8 h-8 rounded-full bg-m3-primary/10 flex items-center justify-center">
+              <History size={16} className="text-m3-primary" />
+            </div>
+            <h3 className="text-xs font-black text-m3-on-surface-variant uppercase tracking-[0.2em]">Jump Back In</h3>
          </div>
          <div className="flex gap-6">
             {Object.entries(stats)
               .filter(([_, s]: any) => s.lastPlayed)
               .sort((a: any, b: any) => b[1].lastPlayed.seconds - a[1].lastPlayed.seconds)
-              .slice(0, 3)
+              .slice(0, 4)
               .map(([id, s]: any) => {
                 const game = games.find(g => g.id === id);
                 if (!game) return null;
                 return (
                   <motion.button
                     key={id}
-                    whileHover={{ y: -5, scale: 1.02 }}
+                    whileHover={{ y: -8, scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => onRecordLaunch(game)}
-                    className="group relative w-64 h-36 rounded-2xl overflow-hidden border border-white/5 shadow-2xl transition-all hover:border-indigo-500/50"
+                    className="group relative w-72 h-40 m3-card bg-m3-surface-variant/40 hover:bg-m3-surface-variant/60 shadow-xl transition-all"
                   >
-                    <img src={game.fanArt} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                    <div className="absolute bottom-4 left-4 text-left">
-                       <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">{game.platform}</p>
-                       <h4 className="text-sm font-black text-white uppercase tracking-tight leading-none truncate w-56">{game.title}</h4>
+                    <img src={game.fanArt} className="w-full h-full object-cover opacity-50 group-hover:opacity-90 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-m3-surface via-m3-surface/20 to-transparent" />
+                    <div className="absolute bottom-5 left-5 text-left">
+                       <p className="text-[9px] font-black text-m3-primary uppercase tracking-[0.15em] mb-1.5">{game.platform}</p>
+                       <h4 className="text-base font-bold text-white tracking-tight truncate w-60">{game.title}</h4>
                     </div>
                   </motion.button>
                 );
@@ -217,426 +219,136 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
          </div>
       </div>
 
-      {/* Desktop Icons */}
-      <div className="absolute inset-0 p-6 flex flex-col gap-6 items-start z-0">
-        <button onDoubleClick={() => toggleWindow('gameManager')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/40 text-indigo-400 flex items-center justify-center backdrop-blur shadow-lg shadow-indigo-500/10 group-hover:bg-indigo-500/30 group-hover:scale-105 transition-all">
-            <Gamepad2 size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-indigo-400">{t('os_library')}</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('terminal')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-zinc-800/60 border border-zinc-600/60 text-zinc-300 flex items-center justify-center backdrop-blur shadow-lg shadow-black/20 group-hover:bg-zinc-700/80 group-hover:scale-105 transition-all">
-            <Terminal size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-zinc-400">{t('os_terminal')}</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('store')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 flex items-center justify-center backdrop-blur shadow-lg shadow-emerald-500/10 group-hover:bg-emerald-500/30 group-hover:scale-105 transition-all">
-            <ShoppingBag size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-emerald-400">{t('os_store')}</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('monitor')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-400 flex items-center justify-center backdrop-blur shadow-lg shadow-rose-500/10 group-hover:bg-rose-500/30 group-hover:scale-105 transition-all">
-            <Activity size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-rose-400">System Monitor</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('bios')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-amber-400 flex items-center justify-center backdrop-blur shadow-lg shadow-amber-500/10 group-hover:bg-amber-500/30 group-hover:scale-105 transition-all">
-            <Shield size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-amber-400">BIOS Shields</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('storage')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/40 text-sky-400 flex items-center justify-center backdrop-blur shadow-lg shadow-sky-500/10 group-hover:bg-sky-500/30 group-hover:scale-105 transition-all">
-            <HardDrive size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-sky-400">Storage VFS</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('customizer')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/40 text-indigo-400 flex items-center justify-center backdrop-blur shadow-lg shadow-indigo-500/10 group-hover:bg-indigo-500/30 group-hover:scale-105 transition-all">
-            <Cpu size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-indigo-400">OS Factory</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('stream')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/40 text-red-500 flex items-center justify-center backdrop-blur shadow-lg shadow-red-500/10 group-hover:bg-red-500/30 group-hover:scale-105 transition-all">
-            <Radio size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-red-500">Stream [OBS]</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('netplay')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/40 text-sky-400 flex items-center justify-center backdrop-blur shadow-lg shadow-sky-500/10 group-hover:bg-sky-500/30 group-hover:scale-105 transition-all">
-            <Globe size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-sky-400">Netplay Hub</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('leaderboards')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/40 text-yellow-500 flex items-center justify-center backdrop-blur shadow-lg shadow-yellow-500/10 group-hover:bg-yellow-500/30 group-hover:scale-105 transition-all">
-            <Trophy size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-yellow-500">Leaderboards</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('wiki')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-sky-600/10 border border-sky-500/40 text-sky-400 flex items-center justify-center backdrop-blur shadow-lg shadow-sky-500/10 group-hover:bg-sky-500/30 group-hover:scale-105 transition-all">
-            <Book size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-sky-400">Install Wiki</span>
-        </button>
-
-        <button onDoubleClick={() => toggleWindow('neural')} className="flex flex-col items-center gap-1 group w-24">
-          <div className="w-14 h-14 rounded-2xl bg-fuchsia-600/10 border border-fuchsia-500/40 text-fuchsia-400 flex items-center justify-center backdrop-blur shadow-lg shadow-fuchsia-500/10 group-hover:bg-fuchsia-500/30 group-hover:scale-105 transition-all">
-            <Brain size={28} />
-          </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-fuchsia-400">Neural Core</span>
-        </button>
+      {/* Desktop Icons - Grid Layout */}
+      <div className="absolute inset-0 p-8 flex flex-col flex-wrap gap-8 items-start z-0 max-h-[calc(100vh-120px)]">
+        {[
+          { id: 'gameManager', icon: Gamepad2, label: t('os_library'), color: 'text-m3-primary', bg: 'bg-m3-primary/10' },
+          { id: 'terminal', icon: Terminal, label: t('os_terminal'), color: 'text-m3-on-surface-variant', bg: 'bg-m3-surface-variant' },
+          { id: 'store', icon: ShoppingBag, label: t('os_store'), color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { id: 'monitor', icon: Activity, label: 'Monitor', color: 'text-rose-400', bg: 'bg-rose-500/10' },
+          { id: 'bios', icon: Shield, label: 'BIOS', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { id: 'storage', icon: HardDrive, label: 'Storage', color: 'text-sky-400', bg: 'bg-sky-500/10' },
+          { id: 'customizer', icon: Cpu, label: 'OS Factory', color: 'text-m3-primary', bg: 'bg-m3-primary/10' },
+          { id: 'stream', icon: Radio, label: 'Stream', color: 'text-red-400', bg: 'bg-red-500/10' },
+          { id: 'netplay', icon: Globe, label: 'Netplay', color: 'text-sky-400', bg: 'bg-sky-500/10' },
+          { id: 'leaderboards', icon: Trophy, label: 'Hall of Fame', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+          { id: 'wiki', icon: Book, label: 'Wiki', color: 'text-sky-400', bg: 'bg-sky-500/10' },
+          { id: 'neural', icon: Brain, label: 'Neural', color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
+        ].map(app => (
+          <button 
+            key={app.id}
+            onDoubleClick={() => toggleWindow(app.id)} 
+            className="flex flex-col items-center gap-2 group w-24"
+          >
+            <div className={`w-16 h-16 rounded-[24px] ${app.bg} border border-m3-outline/20 ${app.color} flex items-center justify-center backdrop-blur-md shadow-lg group-hover:bg-opacity-30 group-hover:scale-110 transition-all duration-300`}>
+              <app.icon size={30} />
+            </div>
+            <span className="text-white text-[11px] font-bold drop-shadow-md text-center leading-tight transition-all group-hover:text-m3-primary">{app.label}</span>
+          </button>
+        ))}
         
-        <button onDoubleClick={() => toggleWindow('settings')} className="flex flex-col items-center gap-1 group w-24 mt-auto">
-          <div className="w-14 h-14 rounded-2xl bg-zinc-800/60 border border-zinc-600/60 text-zinc-300 flex items-center justify-center backdrop-blur shadow-lg shadow-black/20 group-hover:bg-zinc-700/80 group-hover:scale-105 transition-all">
-            <Settings size={28} />
+        <button onDoubleClick={() => toggleWindow('settings')} className="flex flex-col items-center gap-2 group w-24 mt-auto">
+          <div className="w-16 h-16 rounded-[24px] bg-m3-surface-variant border border-m3-outline/20 text-m3-on-surface-variant flex items-center justify-center backdrop-blur-md shadow-lg group-hover:bg-m3-on-surface-variant/80 group-hover:scale-110 transition-all duration-300">
+            <Settings size={30} />
           </div>
-          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-zinc-400">{t('os_settings')}</span>
+          <span className="text-white text-[11px] font-bold drop-shadow-md transition-all group-hover:text-m3-primary">{t('os_settings')}</span>
         </button>
       </div>
 
-      {/* Windows Layer */}
-      <AnimatePresence>
-        {openWindows.includes('gameManager') && (
-          <OsWindow
-            key="gameManager"
-            id="gameManager"
-            title={t('win_library')}
-            icon={<Gamepad2 size={16} className="text-indigo-400" />}
-            isActive={activeWindow === 'gameManager'}
-            onFocus={() => bringToFront('gameManager')}
-            onClose={() => closeWindow('gameManager')}
-            defaultSize={{ width: 1100, height: 650 }}
-            defaultPosition={{ x: 80, y: 40 }}
-            zIndex={getZIndex('gameManager')}
-          >
-            <GameManagerApp 
-              gamesProp={games} 
-              onGamesUpdate={onGamesUpdate} 
-              onSwitchMode={onSwitchMode} 
-              favorites={favorites}
-              toggleFavorite={toggleFavorite}
-              stats={stats}
-              onRecordLaunch={onRecordLaunch}
-            />
-          </OsWindow>
-        )}
-        {openWindows.includes('store') && (
-          <OsWindow
-            key="store"
-            id="store"
-            title={t('win_store')}
-            icon={<ShoppingBag size={16} className="text-emerald-400" />}
-            isActive={activeWindow === 'store'}
-            onFocus={() => bringToFront('store')}
-            onClose={() => closeWindow('store')}
-            defaultSize={{ width: 850, height: 650 }}
-            defaultPosition={{ x: 200, y: 80 }}
-            zIndex={getZIndex('store')}
-          >
-            <DownloaderApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('settings') && (
-          <OsWindow
-            key="settings"
-            id="settings"
-            title={t('os_settings')}
-            icon={<Settings size={16} className="text-zinc-400" />}
-            isActive={activeWindow === 'settings'}
-            onFocus={() => bringToFront('settings')}
-            onClose={() => closeWindow('settings')}
-            defaultSize={{ width: 650, height: 500 }}
-            defaultPosition={{ x: 300, y: 150 }}
-            zIndex={getZIndex('settings')}
-          >
-            <SettingsApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('terminal') && (
-          <OsWindow
-            key="terminal"
-            id="terminal"
-            title="Kernel Shell [AI-Ready] - User: arcade"
-            icon={<Terminal size={16} className="text-zinc-400" />}
-            isActive={activeWindow === 'terminal'}
-            onFocus={() => bringToFront('terminal')}
-            onClose={() => closeWindow('terminal')}
-            defaultSize={{ width: 750, height: 480 }}
-            defaultPosition={{ x: 250, y: 120 }}
-            zIndex={getZIndex('terminal')}
-          >
-            <KernelShellApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('monitor') && (
-          <OsWindow
-            key="monitor"
-            id="monitor"
-            title="System Monitor - Core Telemetry"
-            icon={<Activity size={16} className="text-rose-400" />}
-            isActive={activeWindow === 'monitor'}
-            onFocus={() => bringToFront('monitor')}
-            onClose={() => closeWindow('monitor')}
-            defaultSize={{ width: 850, height: 580 }}
-            defaultPosition={{ x: 180, y: 60 }}
-            zIndex={getZIndex('monitor')}
-          >
-            <SystemMonitorApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('bios') && (
-          <OsWindow
-            key="bios"
-            id="bios"
-            title="BIOS Integrity Shield"
-            icon={<Shield size={16} className="text-amber-400" />}
-            isActive={activeWindow === 'bios'}
-            onFocus={() => bringToFront('bios')}
-            onClose={() => closeWindow('bios')}
-            defaultSize={{ width: 700, height: 520 }}
-            defaultPosition={{ x: 220, y: 100 }}
-            zIndex={getZIndex('bios')}
-          >
-            <BiosManagerApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('storage') && (
-          <OsWindow
-            key="storage"
-            id="storage"
-            title="VFS Explorer [/database]"
-            icon={<HardDrive size={16} className="text-sky-400" />}
-            isActive={activeWindow === 'storage'}
-            onFocus={() => bringToFront('storage')}
-            onClose={() => closeWindow('storage')}
-            defaultSize={{ width: 600, height: 450 }}
-            defaultPosition={{ x: 380, y: 160 }}
-            zIndex={getZIndex('storage')}
-          >
-            <StorageApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('customizer') && (
-          <OsWindow
-            key="customizer"
-            id="customizer"
-            title="Sovereign Distro Factory"
-            icon={<Cpu size={16} className="text-indigo-400" />}
-            isActive={activeWindow === 'customizer'}
-            onFocus={() => bringToFront('customizer')}
-            onClose={() => closeWindow('customizer')}
-            defaultSize={{ width: 800, height: 600 }}
-            defaultPosition={{ x: 150, y: 50 }}
-            zIndex={getZIndex('customizer')}
-          >
-            <CustomizerApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('stream') && (
-          <OsWindow
-            key="stream"
-            id="stream"
-            title="FliperCast Studio [OBS Bridge]"
-            icon={<Radio size={16} className="text-red-500" />}
-            isActive={activeWindow === 'stream'}
-            onFocus={() => bringToFront('stream')}
-            onClose={() => closeWindow('stream')}
-            defaultSize={{ width: 850, height: 600 }}
-            defaultPosition={{ x: 200, y: 80 }}
-            zIndex={getZIndex('stream')}
-          >
-            <StreamApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('leaderboards') && (
-          <OsWindow
-            key="leaderboards"
-            id="leaderboards"
-            title="Global Hall of Fame"
-            icon={<Trophy size={16} className="text-yellow-500" />}
-            isActive={activeWindow === 'leaderboards'}
-            onFocus={() => bringToFront('leaderboards')}
-            onClose={() => closeWindow('leaderboards')}
-            defaultSize={{ width: 900, height: 600 }}
-            defaultPosition={{ x: 190, y: 70 }}
-            zIndex={getZIndex('leaderboards')}
-          >
-            <LeaderboardsApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('netplay') && (
-          <OsWindow
-            key="netplay"
-            id="netplay"
-            title="Neural Netplay"
-            icon={<Globe size={16} className="text-indigo-400" />}
-            isActive={activeWindow === 'netplay'}
-            onFocus={() => bringToFront('netplay')}
-            onClose={() => closeWindow('netplay')}
-            defaultSize={{ width: 850, height: 600 }}
-            defaultPosition={{ x: 210, y: 90 }}
-            zIndex={getZIndex('netplay')}
-          >
-            <NetplayApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('wiki') && (
-          <OsWindow
-            key="wiki"
-            id="wiki"
-            title="Sovereign Hardware Codex"
-            icon={<Book size={16} className="text-sky-400" />}
-            isActive={activeWindow === 'wiki'}
-            onFocus={() => bringToFront('wiki')}
-            onClose={() => closeWindow('wiki')}
-            defaultSize={{ width: 950, height: 650 }}
-            defaultPosition={{ x: 120, y: 40 }}
-            zIndex={getZIndex('wiki')}
-          >
-            <WikiApp />
-          </OsWindow>
-        )}
-        {openWindows.includes('neural') && (
-          <OsWindow
-            key="neural"
-            id="neural"
-            title="Sovereign Neural Core Monitor"
-            icon={<Brain size={16} className="text-fuchsia-400" />}
-            isActive={activeWindow === 'neural'}
-            onFocus={() => bringToFront('neural')}
-            onClose={() => closeWindow('neural')}
-            defaultSize={{ width: 850, height: 580 }}
-            defaultPosition={{ x: 180, y: 80 }}
-            zIndex={getZIndex('neural')}
-          >
-            <NeuralCoreApp />
-          </OsWindow>
-        )}
-      </AnimatePresence>
-      
-      <ControlCenter 
-        isOpen={isControlCenterOpen}
-        onClose={() => setIsControlCenterOpen(false)}
-        volume={settings.volume}
-        onVolumeChange={(val) => updateSetting('volume', val)}
-        brightness={settings.brightness}
-        onBrightnessChange={(val) => updateSetting('brightness', val)}
-      />
-
-      <div className="absolute bottom-0 w-full h-12 bg-black/80 backdrop-blur-3xl border-t border-white/10 flex items-center px-4 z-50">
-        <button onClick={onSwitchMode} className="flex items-center gap-2 px-4 h-9 bg-indigo-600 hover:bg-indigo-500 rounded-md text-sm font-bold text-white shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all">
-          <Gamepad2 size={16} /> Enter Fliper Mode
+      {/* Taskbar Redesign */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[98%] max-w-7xl h-16 bg-m3-surface-variant/60 backdrop-blur-2xl border border-m3-outline/20 rounded-full flex items-center px-2 z-50 shadow-2xl">
+        <button 
+          onClick={onSwitchMode} 
+          className="flex items-center gap-3 px-6 h-12 m3-button-filled shadow-lg shadow-m3-primary/20 shrink-0"
+        >
+          <Gamepad2 size={18} /> 
+          <span className="text-xs uppercase tracking-widest font-black">Fliper Mode</span>
         </button>
 
-        <div className="w-px h-5 bg-white/10 mx-4" />
+        <div className="w-px h-8 bg-m3-outline/20 mx-4" />
 
-        <div className="flex-1 flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
           {openWindows.map(id => (
             <button 
               key={id}
               onClick={() => bringToFront(id)}
-              className={`px-4 h-9 flex items-center gap-2 rounded-md border text-sm font-medium transition-all max-w-[180px] ${
+              className={`px-5 h-12 flex items-center gap-2.5 rounded-full text-xs font-bold transition-all min-w-[140px] max-w-[200px] shrink-0 border ${
                 activeWindow === id 
-                ? 'bg-white/10 border-white/20 text-white shadow-inner' 
-                : 'bg-transparent border-transparent text-zinc-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30 shadow-inner' 
+                : 'bg-m3-surface/20 border-m3-outline/10 text-m3-on-surface-variant hover:bg-m3-surface/40 hover:text-white'
               }`}
             >
-              {activeWindow === id && <div className="absolute top-0 left-0 w-full h-0.5 bg-white/20" />}
-              {id === 'gameManager' && <Gamepad2 size={14} className={activeWindow === id ? 'text-indigo-400' : ''} />}
-              {id === 'terminal' && <Terminal size={14} />}
-              {id === 'store' && <ShoppingBag size={14} className={activeWindow === id ? 'text-emerald-400' : ''} />}
-              {id === 'monitor' && <Activity size={14} className={activeWindow === id ? 'text-rose-400' : ''} />}
-              {id === 'bios' && <Shield size={14} className={activeWindow === id ? 'text-amber-400' : ''} />}
-              {id === 'storage' && <HardDrive size={14} className={activeWindow === id ? 'text-sky-400' : ''} />}
-              {id === 'customizer' && <Cpu size={14} className={activeWindow === id ? 'text-indigo-400' : ''} />}
-              {id === 'stream' && <Radio size={14} className={activeWindow === id ? 'text-red-500' : ''} />}
-              {id === 'leaderboards' && <Trophy size={14} className={activeWindow === id ? 'text-yellow-500' : ''} />}
-              {id === 'wiki' && <Book size={14} className={activeWindow === id ? 'text-sky-400' : ''} />}
-              {id === 'neural' && <Brain size={14} className={activeWindow === id ? 'text-fuchsia-400' : ''} />}
-              {id === 'settings' && <Settings size={14} />}
+              <div className="shrink-0">
+                {id === 'gameManager' && <Gamepad2 size={16} />}
+                {id === 'terminal' && <Terminal size={16} />}
+                {id === 'store' && <ShoppingBag size={16} />}
+                {id === 'monitor' && <Activity size={16} />}
+                {id === 'bios' && <Shield size={16} />}
+                {id === 'storage' && <HardDrive size={16} />}
+                {id === 'customizer' && <Cpu size={16} />}
+                {id === 'stream' && <Radio size={16} />}
+                {id === 'leaderboards' && <Trophy size={16} />}
+                {id === 'wiki' && <Book size={16} />}
+                {id === 'neural' && <Brain size={16} />}
+                {id === 'settings' && <Settings size={16} />}
+              </div>
               <span className="truncate capitalize">{id}</span>
+              {activeWindow === id && <div className="w-1.5 h-1.5 rounded-full bg-m3-primary ml-auto shadow-[0_0_8px_rgba(208,188,255,0.5)]" />}
             </button>
           ))}
         </div>
 
+        <div className="w-px h-8 bg-m3-outline/20 mx-4" />
+
         {/* System User Tray */}
-        <div className="flex items-center gap-2 mr-4">
+        <div className="flex items-center gap-2">
           {user ? (
-            <div className="flex items-center gap-2 px-3 h-9 bg-zinc-800/80 hover:bg-zinc-700/80 border border-white/5 rounded-md transition-all group overflow-hidden max-w-[150px]">
+            <button 
+              onClick={setIsControlCenterOpen.bind(null, !isControlCenterOpen)}
+              className="flex items-center gap-3 pr-2 pl-3 h-12 bg-m3-secondary-container text-m3-on-secondary-container rounded-full border border-m3-outline/20 hover:bg-m3-secondary-container/80 transition-all group overflow-hidden"
+            >
                {user.photoURL ? (
-                 <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
+                 <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full border border-white/10" referrerPolicy="no-referrer" />
                ) : (
-                 <UserIcon size={14} className="text-indigo-400" />
+                 <div className="w-8 h-8 rounded-full bg-m3-primary/20 flex items-center justify-center">
+                   <UserIcon size={16} className="text-m3-primary" />
+                 </div>
                )}
-               <span className="text-[11px] font-bold truncate max-w-[80px]">{user.displayName || user.email}</span>
-               <button onClick={onLogout} className="p-1 hover:text-rose-400 transition-colors">
-                 <LogOut size={12} />
-               </button>
-            </div>
+               <div className="flex flex-col items-start pr-2">
+                  <span className="text-[10px] font-black uppercase opacity-60 leading-none mb-0.5">Operator</span>
+                  <span className="text-xs font-bold truncate max-w-[80px] leading-none">{user.displayName || 'Guest'}</span>
+               </div>
+            </button>
           ) : (
             <button 
               onClick={onLogin}
-              className="flex items-center gap-2 px-4 h-9 bg-zinc-800/80 hover:bg-zinc-700/80 border border-indigo-500/30 rounded-md text-[11px] font-bold text-white transition-all shadow-[0_0_10px_rgba(99,102,241,0.1)] active:scale-95"
+              className="m3-button-tonal h-12 px-6"
             >
-              <LogIn size={14} className="text-indigo-400" />
-              <span>LOG IN</span>
+              <LogIn size={18} />
+              <span className="text-[11px] font-black uppercase tracking-widest">Connect</span>
             </button>
           )}
-        </div>
 
-        {/* System Tray & Telemetry */}
-        <div className="flex items-center gap-2 mr-4">
            <button 
              onClick={() => setIsControlCenterOpen(!isControlCenterOpen)}
-             className={`p-2 rounded-lg transition-all ${isControlCenterOpen ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-zinc-400'}`}
+             className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${isControlCenterOpen ? 'bg-m3-primary text-m3-on-primary shadow-lg shadow-m3-primary/30' : 'bg-m3-surface/40 hover:bg-m3-surface/60 text-m3-on-surface-variant'}`}
            >
-              <LayoutGrid size={18} />
+              <LayoutGrid size={22} />
            </button>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-mono text-zinc-400 bg-black/40 px-4 py-1.5 rounded-full border border-white/5 shadow-inner">
-          {activeTasks > 0 && (
-             <div className="flex items-center gap-1.5 text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-               <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-               <span>{activeTasks} {t('tasks')}</span>
-             </div>
-          )}
-          
-          <div className="flex items-center gap-1.5" title="CPU Usage">
-            <Cpu size={14} className="text-indigo-400" />
-            <span>{hardwareStats.cpu}%</span>
+        <div className="hidden xl:flex items-center gap-5 text-xs font-mono text-m3-on-surface-variant px-6 ml-2">
+          <div className="flex items-center gap-2" title="CPU">
+            <Cpu size={14} className="text-m3-primary" />
+            <span className="font-bold">{hardwareStats.cpu}%</span>
           </div>
-          
-          <div className="flex items-center gap-1.5" title="RAM Usage (64GB Total)">
+          <div className="flex items-center gap-2" title="RAM">
             <HardDrive size={14} className="text-emerald-400" />
-            <span>{hardwareStats.ram.toFixed(1)} GB</span>
-          </div>
-
-          <div className="w-px h-4 bg-white/10" />
-          
-          <div className="flex items-center gap-1.5">
-            <Activity size={14} className="text-zinc-500" />
-            <span>6.8.zen1-1 (WSL2)</span>
+            <span className="font-bold">{hardwareStats.ram.toFixed(1)}GB</span>
           </div>
         </div>
       </div>
     </div>
+
   );
 };

@@ -60,9 +60,15 @@ router.post("/launch", (req, res) => {
         } else binary = c;
 
         const niceCmd = mode === 'LITE' ? 'nice -n 19 ' : '';
+        
+        let raFlags = '';
+        if (process.env.RETRO_USERNAME && process.env.RETRO_API_KEY && binary.includes('retroarch')) {
+            raFlags = ` --cheevos-user ${process.env.RETRO_USERNAME} --cheevos-pass ${process.env.RETRO_API_KEY} --cheevos-enable`;
+        }
+
         const command = process.platform === 'win32' 
-            ? `echo "Executing ${binary} via WSL on ${sRomPath}"` 
-            : `${niceCmd}${binary} -video ${safeMode} "${sRomPath}"`;
+            ? `echo "Executing ${binary}${raFlags} via WSL on ${sRomPath}"` 
+            : `${niceCmd}${binary}${raFlags} -video ${safeMode} "${sRomPath}"`;
 
         exec(command, { timeout: 0, maxBuffer: 1024 * 1024 }, (error, stdout) => {
             if (error) {

@@ -132,12 +132,12 @@ export default function App() {
 
   return (
     <div 
-      className={`w-full h-screen bg-[#050505] overflow-hidden font-sans transition-all duration-1000 ${cocktailMode ? 'rotate-180' : ''}`}
+      className={`w-full h-screen bg-m3-surface overflow-hidden font-sans transition-all duration-1000 ${cocktailMode ? 'rotate-180' : ''}`}
       style={{ filter: `brightness(${settings.brightness})` }}
     >
-      <div className="absolute inset-0 arcade-grid pointer-events-none opacity-20" />
+      <div className="absolute inset-0 arcade-grid pointer-events-none opacity-10" />
       <div className="absolute inset-0 kernel-gradient pointer-events-none" />
-      <div className="scanline absolute inset-0 opacity-10" />
+      <div className="scanline absolute inset-0 opacity-5" />
 
       <AnimatePresence mode="wait">
         {mode === 'boot' ? (
@@ -147,37 +147,39 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
               transition={{ duration: 0.5 }}
-              className="w-full h-full flex flex-col items-center justify-center p-8 font-mono text-xs text-zinc-400 z-50 relative"
+              className="w-full h-full flex flex-col items-center justify-center p-8 font-mono text-xs text-m3-on-surface-variant z-50 relative"
            >
-              <div className="max-w-md w-full glass-panel p-8 glow-emerald rounded-2xl">
-                <div className="flex items-center gap-3 mb-6 text-emerald-500 font-display font-bold tracking-widest uppercase">
-                   <Terminal size={18} className="animate-pulse" />
-                   <span>FliperOS Unified Desktop</span>
+              <div className="max-w-md w-full m3-card-elevated p-10 bg-m3-surface-variant/40 border-m3-outline/30">
+                <div className="flex items-center gap-4 mb-8 text-m3-primary font-display font-bold tracking-widest uppercase text-base">
+                   <div className="w-10 h-10 bg-m3-primary/10 rounded-xl flex items-center justify-center">
+                     <Terminal size={22} className="animate-pulse" />
+                   </div>
+                   <span>FliperOS System Initializer</span>
                 </div>
                 
-                <div className="space-y-1.5 h-48 overflow-hidden mb-6 flex flex-col justify-end">
+                <div className="space-y-2 h-48 overflow-hidden mb-8 flex flex-col justify-end">
                    {bootLogs.map((log, i) => (
                      <motion.div 
                         key={i} 
                         initial={{ opacity: 0, x: -10 }} 
                         animate={{ opacity: 1, x: 0 }}
-                        className={(log && typeof log === 'string' && log.startsWith('[')) ? 'text-rose-400' : ''}
+                        className={(log && typeof log === 'string' && log.startsWith('[')) ? 'text-m3-error' : 'text-m3-on-surface-variant'}
                       >
-                       <span className="text-zinc-600 mr-2">{'>'}</span>{log}
+                       <span className="text-m3-outline mr-2 opacity-50">{'>'}</span>{log}
                      </motion.div>
                    ))}
                 </div>
 
-                <div className="relative w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="relative w-full h-1.5 bg-m3-surface-variant rounded-full overflow-hidden mb-4">
                    <motion.div 
-                      className="absolute top-0 left-0 h-full bg-emerald-500" 
+                      className="absolute top-0 left-0 h-full bg-m3-primary" 
                       initial={{ width: 0 }}
                       animate={{ width: `${bootProgress}%` }}
                    />
                 </div>
-                <div className="flex justify-between items-center mt-3 text-[10px] text-zinc-500 font-bold tracking-widest uppercase">
-                   <span>Kernel v6.8.zen1</span>
-                   <span>{bootProgress}%</span>
+                <div className="flex justify-between items-center text-[11px] text-m3-outline font-black tracking-widest uppercase">
+                   <span className="opacity-60">Subsystem v6.8.zen1</span>
+                   <span className="text-m3-primary font-bold">{bootProgress}%</span>
                 </div>
               </div>
               

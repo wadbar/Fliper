@@ -1,6 +1,8 @@
 
 import { exec } from "child_process";
 import { promisify } from "util";
+import path from "path";
+import fs from "fs";
 import { logger } from "./Logger";
 import { SecurityProvider } from "./SecurityProvider";
 
@@ -26,7 +28,15 @@ export class KernelProxy {
     "mkarchiso",
     "debootstrap",
     "genisoimage",
-    "lspci"
+    "lspci",
+    "mount -t tmpfs",
+    "mkdir -p /mnt/ramdisk",
+    "rsync -av --progress",
+    "mame -bgfx_path",
+    "mame -video bgfx -hlsl_enable 1",
+    "md5sum",
+    "sha1sum",
+    "sha256sum"
   ];
 
   public static async execute(command: string): Promise<string> {
@@ -36,7 +46,7 @@ export class KernelProxy {
     // 2. Advanced Whitelist Check (Allows exact match or prefix if it's a tool like chdman)
     const isWhitelisted = this.WHITELIST.some(w => {
         // Safe prefix matching for builder tools
-        if (["retroarch", "ls -la", "chdman createcd", "aws s3", "rclone sync", "mkarchiso", "debootstrap", "genisoimage", "lspci"].some(tool => trimmed.startsWith(tool))) return true;
+        if (["retroarch", "ls -la", "chdman createcd", "aws s3", "rclone sync", "mkarchiso", "debootstrap", "genisoimage", "lspci", "mount -t tmpfs", "mkdir -p /mnt/ramdisk", "rsync", "mame", "md5sum", "sha1sum", "sha256sum"].some(tool => trimmed.startsWith(tool))) return true;
         return trimmed === w;
     });
 
@@ -61,5 +71,24 @@ export class KernelProxy {
       logger.error(`Kernel Proxy Error: ${error.message}`);
       return `[ERROR] ${error.message}`;
     }
+  }
+
+  public static async cacheToRamDisk(sourcePath: string): Promise<boolean> {
+      try {
+          logger.info(`Initiating RAM Disk caching for: ${sourcePath}`);
+          const dbPath = path.resolve(process.cwd(), sourcePath);
+          if (!fs.existsSync(dbPath)) throw new Error("SOURCE_NOT_FOUND");
+
+          // 1. Ensure mount point exists
+          await this.execute("mkdir -p /mnt/ramdisk");
+          // 2. Mount tmpfs if not already mounted (using -a for safety or direct check)
+          await this.execute("mount -t tmpfs -o size=2G tmpfs /mnt/ramdisk");
+          // 3. Sync files with high priority
+          await this.execute(`rsync -av --progress --ignore-existing ${dbPath} /mnt/ramdisk/`);
+          return true;
+      } catch (e) {
+          logger.error(`RAM Disk Sync Failure: ${e}`);
+          return false;
+      }
   }
 }

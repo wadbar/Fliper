@@ -23,95 +23,128 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      initial={{ opacity: 0, y: 20, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-      className="absolute bottom-16 right-4 w-80 bg-zinc-900/90 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-2xl z-[100] overflow-hidden"
+      exit={{ opacity: 0, y: 20, scale: 0.9 }}
+      className="absolute bottom-20 right-8 w-[360px] bg-m3-surface shadow-2xl border border-m3-outline/20 rounded-[28px] z-[100] overflow-hidden"
     >
-       <div className="p-6 space-y-6">
+       <div className="p-8 space-y-8">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+             <h3 className="text-base font-bold text-m3-on-surface tracking-tight">System Controls</h3>
+             <span className="text-[10px] font-black text-m3-outline uppercase tracking-widest bg-m3-surface-variant/50 px-2 py-0.5 rounded-full">v6.8.zen1</span>
+          </div>
+
           {/* Quick Toggles */}
-          <div className="grid grid-cols-2 gap-3">
-             <div className="flex items-center gap-3 p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20">
-                <Wifi size={18} className="text-white" />
-                <div className="flex flex-col">
-                   <span className="text-[10px] font-bold text-indigo-200">WiFi</span>
-                   <span className="text-xs font-black text-white">UP-V9-NET</span>
+          <div className="grid grid-cols-2 gap-4">
+             <div className="flex items-center gap-4 p-4 bg-m3-primary-container text-m3-on-primary-container rounded-[24px] shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-m3-primary/20 flex items-center justify-center shrink-0">
+                  <Wifi size={20} className="text-m3-primary" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                   <span className="text-[10px] font-black uppercase opacity-60 leading-none mb-1">Wifi</span>
+                   <span className="text-sm font-bold truncate">UP-V9-NET</span>
                 </div>
              </div>
-             <div className="flex items-center gap-3 p-3 bg-zinc-800 rounded-2xl border border-white/5">
-                <Bluetooth size={18} className="text-zinc-400" />
+             <div className="flex items-center gap-4 p-4 bg-m3-surface-variant/40 rounded-[24px] border border-m3-outline/10 text-m3-on-surface-variant hover:bg-m3-surface-variant/60 transition-colors cursor-pointer group">
+                <div className="w-10 h-10 rounded-full bg-m3-outline/10 flex items-center justify-center shrink-0 group-hover:bg-m3-outline/20 transition-all">
+                  <Bluetooth size={20} className="text-m3-outline" />
+                </div>
                 <div className="flex flex-col">
-                   <span className="text-[10px] font-bold text-zinc-500">Bluetooth</span>
-                   <span className="text-xs font-black text-zinc-300">Off</span>
+                   <span className="text-[10px] font-black uppercase opacity-60 leading-none mb-1">Bluetooth</span>
+                   <span className="text-sm font-bold">Inactive</span>
                 </div>
              </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
              {/* Brightness */}
-             <div className="space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">
-                   <div className="flex items-center gap-2"><Sun size={12} /> Brightness</div>
-                   <span>{Math.round(brightness * 100)}%</span>
+             <div className="space-y-3">
+                <div className="flex justify-between items-center text-[11px] font-black text-m3-outline uppercase tracking-[0.15em]">
+                   <div className="flex items-center gap-2"><Sun size={14} /> Screen Intensity</div>
+                   <span className="text-m3-primary">{Math.round(brightness * 100)}%</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0.1" 
-                  max="1.5" 
-                  step="0.05"
-                  value={brightness}
-                  onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-indigo-500"
-                />
+                <div className="relative h-4 flex items-center">
+                  <input 
+                    type="range" 
+                    min="0.1" 
+                    max="1.5" 
+                    step="0.05"
+                    value={brightness}
+                    onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+                    className="w-full h-8 bg-m3-surface-variant rounded-full appearance-none cursor-pointer accent-m3-primary opacity-0 z-10"
+                  />
+                  <div className="absolute inset-0 bg-m3-surface-variant rounded-full overflow-hidden pointer-events-none">
+                    <div 
+                      className="h-full bg-m3-primary/30" 
+                      style={{ width: `${((brightness - 0.1) / 1.4) * 100}%` }} 
+                    />
+                  </div>
+                  <div 
+                    className="absolute w-1 h-4 bg-m3-primary rounded-full pointer-events-none" 
+                    style={{ left: `calc(${((brightness - 0.1) / 1.4) * 100}%)`, transform: 'translateX(-50%)' }}
+                  />
+                </div>
              </div>
 
              {/* Volume */}
-             <div className="space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">
-                   <div className="flex items-center gap-2"><Volume2 size={12} /> Master Volume</div>
-                   <span>{Math.round(volume * 100)}%</span>
+             <div className="space-y-3">
+                <div className="flex justify-between items-center text-[11px] font-black text-m3-outline uppercase tracking-[0.15em]">
+                   <div className="flex items-center gap-2"><Volume2 size={14} /> Audio Driver</div>
+                   <span className="text-m3-primary">{Math.round(volume * 100)}%</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.01"
-                  value={volume}
-                  onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-indigo-500"
-                />
+                <div className="relative h-4 flex items-center">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.01"
+                    value={volume}
+                    onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+                    className="w-full h-8 bg-m3-surface-variant rounded-full appearance-none cursor-pointer accent-m3-primary opacity-0 z-10"
+                  />
+                  <div className="absolute inset-0 bg-m3-surface-variant rounded-full overflow-hidden pointer-events-none">
+                    <div 
+                      className="h-full bg-m3-primary/30" 
+                      style={{ width: `${volume * 100}%` }} 
+                    />
+                  </div>
+                  <div 
+                    className="absolute w-1 h-4 bg-m3-primary rounded-full pointer-events-none" 
+                    style={{ left: `${volume * 100}%`, transform: 'translateX(-50%)' }}
+                  />
+                </div>
              </div>
           </div>
 
-          {/* System Health Summary */}
-          <div className="grid grid-cols-2 gap-3">
-             <div className="p-3 bg-zinc-950/50 rounded-2xl border border-white/5 flex flex-col gap-1 items-center justify-center">
-                <ShieldCheck size={16} className="text-emerald-500" />
-                <span className="text-[9px] font-black text-zinc-500 uppercase">Integrity</span>
-                <span className="text-xs font-bold text-zinc-300">100%</span>
+          {/* System Health */}
+          <div className="flex gap-4">
+             <div className="flex-1 p-4 bg-m3-surface-variant/20 rounded-[20px] flex flex-col items-center justify-center gap-2 border border-m3-outline/5 hover:bg-m3-surface-variant/30 transition-all">
+                <ShieldCheck size={20} className="text-emerald-400" />
+                <span className="text-xs font-bold text-white">Secure</span>
              </div>
-             <div className="p-3 bg-zinc-950/50 rounded-2xl border border-white/5 flex flex-col gap-1 items-center justify-center">
-                <Cpu size={16} className="text-indigo-400" />
-                <span className="text-[9px] font-black text-zinc-500 uppercase">Neural Load</span>
-                <span className="text-xs font-bold text-zinc-300">2.4%</span>
+             <div className="flex-1 p-4 bg-m3-surface-variant/20 rounded-[20px] flex flex-col items-center justify-center gap-2 border border-m3-outline/5 hover:bg-m3-surface-variant/30 transition-all">
+                <Cpu size={20} className="text-m3-primary" />
+                <span className="text-xs font-bold text-white">2.4% Load</span>
              </div>
           </div>
        </div>
 
        {/* Footer */}
-       <div className="px-6 py-4 bg-black/40 border-t border-white/5 flex justify-between items-center">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
-             <Battery size={12} className="text-emerald-500" /> 100% (AC)
+       <div className="px-8 py-5 bg-m3-surface-variant/30 border-t border-m3-outline/10 flex justify-between items-center">
+          <div className="flex items-center gap-3 text-xs font-bold text-m3-outline">
+             <Battery size={16} className="text-emerald-400" /> Powered by AC
           </div>
-          <div className="flex gap-2">
-             <button className="p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">
-                <Moon size={14} className="text-zinc-400" />
+          <div className="flex gap-3">
+             <button className="w-10 h-10 rounded-full bg-m3-surface-variant text-m3-outline hover:text-white flex items-center justify-center transition-all">
+                <Moon size={16} />
              </button>
-             <button className="p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">
-                <Zap size={14} className="text-amber-500" />
+             <button className="w-10 h-10 rounded-full bg-m3-primary text-m3-on-primary flex items-center justify-center shadow-lg shadow-m3-primary/20 transition-all active:scale-95">
+                <Zap size={16} />
              </button>
           </div>
        </div>
     </motion.div>
+
   );
 };

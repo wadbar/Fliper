@@ -59,7 +59,7 @@ function isRetriable(errorMsg) {
     if (msg.includes('api key invalid')) return false;
     if (msg.includes('generaterequestperday')) return false; // Daily quota exhausted
     
-    const codes = ['429', 'timeout', 'deadline', '502', '503', '504', 'abort'];
+    const codes = ['429', 'timeout', 'deadline', '502', '503', '504', 'abort', 'quarantined'];
     if (codes.some(p => msg.includes(p))) return true;
     if (msg.includes('fetch failed') || msg.includes('econn')) return true;
     

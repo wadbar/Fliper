@@ -16,6 +16,7 @@ import { GameRouter } from "./src/server/routes/GameRouter";
 import { AiRouter } from "./src/server/routes/AiRouter";
 import { CloudRouter } from "./src/server/routes/CloudRouter";
 import { AuthRouter } from "./src/server/routes/AuthRouter";
+import { RetroRouter } from "./src/server/routes/RetroRouter";
 
 // V10: ADVANCED TELEMETRY & GLOBAL ERROR INTERCEPTION
 process.on('uncaughtException', (err: Error) => {
@@ -63,6 +64,7 @@ async function startServer() {
     app.use("/api/ai", AiRouter);
     app.use("/api/cloud", CloudRouter);
     app.use("/api/auth", AuthRouter);
+    app.use("/api/retro", RetroRouter);
 
     // LEGACY REDIRECTS (Graceful fallback)
     app.get("/api/health", (req: Request, res: Response) => res.redirect(301, "/api/system/health"));

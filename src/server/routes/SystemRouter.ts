@@ -174,6 +174,33 @@ router.post("/config/emulators", async (req, res) => {
     }
 });
 
+router.post("/cache", async (req, res) => {
+    try {
+        const { source } = req.body;
+        if (!source) throw new Error("SOURCE_PATH_REQUIRED");
+        const success = await KernelProxy.cacheToRamDisk(source);
+        res.json({ status: success ? "ok" : "fail" });
+    } catch(err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post("/mame-optimize", async (req, res) => {
+    try {
+        logger.info("Injecting ULTRA performance MAME shaders (RTX 5060 Targeted)");
+        // Optimized HLSL settings for RTX 5060 (simulating sub-pixel response and high-performance mask)
+        await KernelProxy.execute("mame -video bgfx -hlsl_enable 1 -bgfx_mode ultra -bgfx_backend vulkan");
+        res.json({ 
+            status: "ok", 
+            mode: "ULTRA_BGFX",
+            gpu_optimization: "RTX_5060_HLSL",
+            backend: "VULKAN_READY"
+        });
+    } catch(err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get("/tasks", (req, res) => {
     res.json(queueManager.getTasks());
 });

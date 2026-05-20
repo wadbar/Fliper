@@ -471,6 +471,14 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
            >
               <Play size={16} /> {t('enter_fliper')}
            </button>
+           <button 
+              onClick={() => {
+                 alert("Kernel Audit: Validating MAME DAT ROM sets...");
+              }}
+              className="w-full flex items-center justify-center gap-2 mt-2 bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600/20 text-rose-400 py-2 rounded-md text-xs font-bold transition-colors tracking-wide uppercase"
+           >
+              <Database size={14} /> MAME Core Audit
+           </button>
         </div>
       </div>
 

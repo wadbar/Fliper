@@ -42,31 +42,39 @@ export const OsWindow: React.FC<WindowProps> = ({
         zIndex,
       }}
       onPointerDown={onFocus}
-      className={`flex flex-col bg-[#1A1A1D]/95 backdrop-blur-3xl border shadow-2xl rounded-xl overflow-hidden transition-all duration-200 ${isActive ? 'border-zinc-500/50 shadow-[0_0_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10' : 'border-zinc-800'}`}
+      className={`flex flex-col bg-m3-surface border shadow-2xl rounded-[28px] overflow-hidden transition-all duration-300 ${isActive ? 'border-m3-outline/30 shadow-m3-primary/10 ring-1 ring-m3-primary/20' : 'border-m3-outline/10'}`}
     >
       <div 
         onPointerDown={(e) => dragControls.start(e)}
-        className="window-titlebar flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-black/60 to-transparent select-none cursor-move border-b border-white/5"
+        className="window-titlebar flex items-center justify-between px-6 py-4 bg-m3-surface-variant/30 select-none cursor-move border-b border-m3-outline/10"
       >
-        <div className="flex items-center gap-2 text-zinc-300">
-          {icon}
-          <span className="text-sm font-bold tracking-wide">{title}</span>
+        <div className="flex items-center gap-3 text-m3-on-surface">
+          <div className="w-8 h-8 rounded-full bg-m3-primary/10 flex items-center justify-center">
+            {icon ? React.cloneElement(icon as React.ReactElement<any>, { size: 16, className: 'text-m3-primary' }) : <div className="w-2 h-2 rounded-full bg-m3-primary" />}
+          </div>
+          <span className="text-sm font-bold tracking-tight text-white">{title}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="text-zinc-500 hover:text-white transition-colors">
-            <Minus size={14} />
+        <div className="flex items-center gap-3">
+          <button className="w-8 h-8 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-surface-variant hover:text-white transition-all">
+            <Minus size={16} />
           </button>
-          <button className="text-zinc-500 hover:text-white transition-colors">
-            <Square size={12} />
+          <button className="w-8 h-8 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-surface-variant hover:text-white transition-all">
+            <Square size={14} />
           </button>
-          <button onClick={onClose} className="text-zinc-500 hover:text-red-500 transition-colors">
-            <X size={16} />
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }} 
+            className="w-8 h-8 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-error/20 hover:text-m3-error transition-all"
+          >
+            <X size={18} />
           </button>
         </div>
       </div>
       
       {/* Content */}
-      <div className="flex-1 overflow-hidden relative bg-[#0F0F11]">
+      <div className="flex-1 overflow-hidden relative bg-m3-surface/50 backdrop-blur-sm">
         {children}
       </div>
     </motion.div>

@@ -97,6 +97,7 @@ export const FliperMode: React.FC<FliperModeProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isPreloading, setIsPreloading] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [metrics, setMetrics] = useState({ cpu: 0, ram: 0, mode: 'STABLE' });
 
@@ -314,8 +315,15 @@ export const FliperMode: React.FC<FliperModeProps> = ({
   // ----------------------------------------------------------------------
   // Launch Logic
   // ----------------------------------------------------------------------
-  const launchGame = useCallback(async () => {
+  const launchGame = useCallback(() => {
     if (isLaunching || !activeGame) return;
+    audioEngine.playSelect();
+    setShowLaunchConfirm(true);
+  }, [activeGame, isLaunching]);
+
+  const confirmLaunch = useCallback(async () => {
+    if (isLaunching || !activeGame) return;
+    setShowLaunchConfirm(false);
     audioEngine.playLaunch();
     setIsLaunching(true);
     
@@ -323,6 +331,27 @@ export const FliperMode: React.FC<FliperModeProps> = ({
     const platform = activeGame.platform;
     const mode = localStorage.getItem('fliper_perf_mode') || 'ultra';
     
+    // RAM Disk Caching Logic for Arcade (MAME/NeoGeo/Naomi)
+    if (['Arcade_JP', 'NeoGeo', 'Naomi'].includes(platform)) {
+        // Cache ROM
+        await fetch('/api/system/cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: `roms/${platform.toLowerCase()}/${activeGame.id}` })
+        });
+        // Cache Samples (Audio)
+        await fetch('/api/system/cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: `samples/${activeGame.id}` })
+        });
+    }
+
+    // MAME HLSL Shader optimization for high-end session
+    if (platform === 'Arcade_JP' || platform === 'NeoGeo') {
+        await fetch('/api/system/mame-optimize', { method: 'POST' });
+    }
+
     // Core Resolution
     let coreId = activeGame.suggestedCore?.toLowerCase() || 'mame';
 
@@ -368,7 +397,7 @@ export const FliperMode: React.FC<FliperModeProps> = ({
     const pollGamepad = () => {
       const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
       const gp = gamepads[0];
-      if (gp && !isLaunching) {
+      if (gp && !isLaunching && !showLaunchConfirm) {
         // D-Pad or Left Stick
         const up = gp.buttons[12]?.pressed || gp.axes[1] < -0.5;
         const down = gp.buttons[13]?.pressed || gp.axes[1] > 0.5;
@@ -412,6 +441,12 @@ export const FliperMode: React.FC<FliperModeProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isLaunching) return;
+
+      if (showLaunchConfirm) {
+        if (e.key === 'Enter') confirmLaunch();
+        if (e.key === 'Escape' || e.key === 'Backspace') setShowLaunchConfirm(false);
+        return;
+      }
       
       // Handle search toggle
       if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
@@ -745,6 +780,17 @@ export const FliperMode: React.FC<FliperModeProps> = ({
                                 {activeGame?.description || "Initializing system description matrix..."}
                              </p>
 
+                             <button 
+                               onClick={launchGame}
+                               className="px-12 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl flex items-center gap-4 transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(99,102,241,0.5)] group mb-12 pointer-events-auto"
+                             >
+                                <Play size={24} className="text-white fill-white" />
+                                <div className="flex flex-col items-start text-left">
+                                   <span className="text-white font-black text-xl uppercase tracking-widest leading-none">Initialize</span>
+                                   <span className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mt-1">Engage Subsystem</span>
+                                </div>
+                             </button>
+
                              <div className="relative group">
                                 <motion.div
                                   animate={{ 
@@ -895,6 +941,41 @@ export const FliperMode: React.FC<FliperModeProps> = ({
                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Change Platform</span>
            </div>
         </div>
+
+        {/* Launch Confirm Modal */}
+        <AnimatePresence>
+          {showLaunchConfirm && activeGame && !isLaunching && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8"
+            >
+               <div className="bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-2xl overflow-hidden max-w-xl w-full flex flex-col p-8 items-center text-center">
+                  <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mb-6">
+                     <Play size={36} className="text-indigo-400 ml-1" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-wide">Ready to Launch?</h2>
+                  <p className="text-zinc-400 mb-8 max-w-md">You are about to boot <span className="text-indigo-300 font-bold">{activeGame.title}</span> on the <span className="uppercase text-amber-500 font-bold">{activeGame.platform}</span> core pipeline.</p>
+                  
+                  <div className="flex gap-4 w-full">
+                     <button 
+                       onClick={() => setShowLaunchConfirm(false)}
+                       className="flex-1 py-3 px-6 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors uppercase tracking-widest text-xs"
+                     >
+                        Cancel (B)
+                     </button>
+                     <button 
+                       onClick={confirmLaunch}
+                       className="flex-1 py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors uppercase tracking-widest text-xs shadow-lg shadow-indigo-600/20"
+                     >
+                        Engage (A)
+                     </button>
+                  </div>
+               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Launching Sequence Overlay */}
         <AnimatePresence>

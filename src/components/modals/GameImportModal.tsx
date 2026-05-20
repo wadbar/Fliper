@@ -13,8 +13,33 @@ interface GameImportModalProps {
 export const GameImportModal: React.FC<GameImportModalProps> = ({ isOpen, onClose, onImport }) => {
   const [title, setTitle] = useState('');
   const [platform, setPlatform] = useState('Arcade');
+  const [filename, setFilename] = useState('');
   const [isScraping, setIsScraping] = useState(false);
+  const [isTagging, setIsTagging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tagData, setTagData] = useState<any>(null);
+
+  const handleTag = async () => {
+    if (!filename.trim()) return;
+    setIsTagging(true);
+    setError(null);
+    try {
+      const data = await aiOrchestrator.tagRom(filename);
+      if (data) {
+        setTagData(data);
+        setTitle(data.title);
+        // Autodetect platform from common extensions if filename provided
+        if (filename.toLowerCase().endsWith('.z64')) setPlatform('Nintendo 64');
+        else if (filename.toLowerCase().endsWith('.sfc')) setPlatform('Super Nintendo');
+        else if (filename.toLowerCase().endsWith('.nes')) setPlatform('NES');
+        else if (filename.toLowerCase().endsWith('.bin') || filename.toLowerCase().endsWith('.md')) setPlatform('Genesis');
+      }
+    } catch (err: any) {
+      setError("AI Tagging failed.");
+    } finally {
+      setIsTagging(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +104,49 @@ export const GameImportModal: React.FC<GameImportModalProps> = ({ isOpen, onClos
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              <div className="bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
+                <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Neural Tagger (Input Filename)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={filename}
+                    onChange={(e) => setFilename(e.target.value)}
+                    placeholder="e.g. z3lda_ptbr_v2.z64"
+                    className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-xs text-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTag}
+                    disabled={isTagging || !filename.trim()}
+                    className="px-4 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                  >
+                    {isTagging ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  </button>
+                </div>
+                {tagData && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 grid grid-cols-2 gap-2"
+                  >
+                    <div className="bg-black/30 p-2 rounded-lg border border-white/5">
+                      <span className="text-[8px] text-zinc-500 uppercase block font-black">Region</span>
+                      <span className="text-[10px] text-indigo-300 font-bold">{tagData.region || 'Unknown'}</span>
+                    </div>
+                    <div className="bg-black/30 p-2 rounded-lg border border-white/5">
+                      <span className="text-[8px] text-zinc-500 uppercase block font-black">Version</span>
+                      <span className="text-[10px] text-indigo-300 font-bold">{tagData.version || 'v1.0'}</span>
+                    </div>
+                    {tagData.isHack && (
+                      <div className="col-span-2 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                         <span className="text-[8px] text-amber-500 uppercase block font-black">Detected Patch/Hack</span>
+                         <span className="text-[10px] text-amber-200 font-medium">{tagData.suggestedFix || 'Translation or Revision Patch'}</span>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Target Title</label>
                 <input

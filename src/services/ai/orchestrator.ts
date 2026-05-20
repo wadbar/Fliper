@@ -87,6 +87,25 @@ class AiOrchestrator {
     }
 
     /**
+     * Analyzes ROM filenames to suggest clean titles and metadata.
+     */
+    public async tagRom(filename: string): Promise<{ title: string; region: string; version: string; isHack: boolean; suggestedFix: string } | null> {
+        try {
+            const response = await fetch('/api/ai/tag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            });
+
+            if (!response.ok) throw new Error("TAG_FAULT");
+            return await response.json();
+        } catch (e) {
+            console.error("[NeuralOrchestrator] Tagging failed:", e);
+            return null;
+        }
+    }
+
+    /**
      * Resets the local session cache safely.
      */
     public clearCache(): void {
