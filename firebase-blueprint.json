@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Game": {
+      "title": "Game Meta",
+      "description": "Comprehensive metadata for a retro game.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier (usually slugified title)." },
+        "title": { "type": "string", "description": "Display title of the game." },
+        "platform": { "type": "string", "description": "Platform/System (e.g., SNES, Arcade)." },
+        "developer": { "type": "string" },
+        "releaseYear": { "type": "integer" },
+        "genre": { "type": "string" },
+        "coverArt": { "type": "string", "format": "uri" },
+        "fanArt": { "type": "string", "format": "uri" },
+        "description": { "type": "string" },
+        "suggestedCore": { "type": "string", "description": "Recommended emulator core." }
+      },
+      "required": ["id", "title", "platform"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User preferences and system settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "theme": { "type": "string", "enum": ["dark", "light"] },
+        "language": { "type": "string" }
+      }
+    },
+    "Favorite": {
+      "title": "Favorite Game",
+      "description": "Reference to a game favorited by a user.",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GameStats": {
+      "title": "Game Statistics",
+      "description": "Usage stats for a specific game.",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string" },
+        "playTime": { "type": "integer" },
+        "playCount": { "type": "integer" },
+        "lastPlayed": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Achievement": {
+      "title": "User Achievement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "unlockedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/games/{gameId}": {
+      "schema": "Game",
+      "description": "Global game database."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profiles."
+    },
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": "Favorite",
+      "description": "User-specific game favorites."
+    },
+    "/users/{userId}/stats/{gameId}": {
+      "schema": "GameStats",
+      "description": "Individual game play stats."
+    },
+    "/users/{userId}/achievements/{achievementId}": {
+      "schema": "Achievement",
+      "description": "Unlocked achievements."
+    }
+  }
+}

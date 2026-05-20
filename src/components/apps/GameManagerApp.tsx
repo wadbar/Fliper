@@ -1,18 +1,28 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Game } from '../../data/games';
-import { Play, Star, Search, Settings, FolderSync, Sparkles, Loader2, Database, Info, Zap, CheckCircle2 } from 'lucide-react';
+import { Play, Star, Search, Settings, FolderSync, Sparkles, Loader2, Database, Info, Zap, CheckCircle2, Heart, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { aiOrchestrator } from '../../services/ai/orchestrator';
 import { GameDetailsModal } from '../modals/GameDetailsModal';
+import Fuse from 'fuse.js';
 
 interface GameManagerAppProps {
   gamesProp: Game[];
   onGamesUpdate: React.Dispatch<React.SetStateAction<Game[]>>;
   onSwitchMode: () => void;
+  favorites: Set<string>;
+  toggleFavorite: (id: string) => void;
+  stats: Record<string, any>;
+  onRecordLaunch: (game: Game) => void;
 }
 
 // Elite Optimization: Memoized Card for high-volume rendering
-const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick }: { game: Game; isSelected: boolean; onClick: (g: Game) => void; onDoubleClick: (g: Game) => void }) => (
+const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick, onEnrich, isEnriching, isFavorite, onToggleFavorite, stats }: { game: Game; isSelected: boolean; onClick: (g: Game) => void; onDoubleClick: (g: Game) => void; onEnrich?: (e: React.MouseEvent, g: Game) => void; isEnriching?: boolean; isFavorite: boolean; onToggleFavorite: (id: string) => void; stats?: any }) => {
+  const needsEnrichment = !game.description || game.description.length < 50 || !game.suggestedCore || !game.releaseYear || !game.genre;
+  const playCount = stats?.playCount || 0;
+  
+  return (
   <motion.div 
     whileHover={{ y: -8, scale: 1.05 }}
     whileTap={{ scale: 0.98 }}
@@ -24,6 +34,14 @@ const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick }: { gam
         : 'border-zinc-800 hover:border-zinc-500/50 shadow-xl'
     }`}
   >
+    {/* Play Count Badge */}
+    {playCount > 0 && (
+      <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 border border-white/10 rounded backdrop-blur-md z-40">
+         <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest flex items-center gap-1">
+            <Clock size={8} className="text-emerald-400" /> {playCount}nd Play
+         </span>
+      </div>
+    )}
     <div className="aspect-[3/4] relative bg-zinc-900 overflow-hidden">
       {/* Texture Overlay for real box feel */}
       <div className="absolute inset-0 opacity-10 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/dust.png')]" />
@@ -36,6 +54,21 @@ const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick }: { gam
         onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80'; }} 
       />
       
+      {/* Enrichment Pulse Overlay */}
+      <AnimatePresence>
+        {isEnriching && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-indigo-600/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center z-30"
+          >
+            <Loader2 size={32} className="text-white animate-spin mb-2" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Analysing Metadata...</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Dynamic Shine Sweep */}
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
       
@@ -46,24 +79,58 @@ const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick }: { gam
       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
       
       <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
-        <motion.div 
-          initial={{ scale: 0.5, opacity: 0 }}
-          whileHover={{ scale: 1, opacity: 1 }}
-          className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-        >
-            <Play size={28} className="text-black ml-1" fill="currentColor" />
-        </motion.div>
+        {!isEnriching && (
+          <motion.div 
+            initial={{ scale: 0.5, opacity: 0 }}
+            whileHover={{ scale: 1, opacity: 1 }}
+            className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+          >
+              <Play size={28} className="text-black ml-1" fill="currentColor" />
+          </motion.div>
+        )}
       </div>
 
       {isSelected && (
-          <div className="absolute top-3 right-3 p-1.5 bg-indigo-500 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.6)] animate-pulse">
+          <div className="absolute top-3 left-3 p-1.5 bg-indigo-500 rounded-lg shadow-[0_0_15px_rgba(99,102,241,0.6)] animate-pulse">
              <CheckCircle2 size={14} className="text-white" />
           </div>
       )}
+
+      {isFavorite && (
+          <div className="absolute top-3 left-12 p-1.5 bg-rose-500 rounded-lg shadow-[0_0_15px_rgba(244,63,94,0.6)]">
+             <Heart size={14} className="text-white fill-white" />
+          </div>
+      )}
+
+      {needsEnrichment && !isEnriching && (
+        <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 border border-amber-500/30 rounded backdrop-blur-md z-40">
+           <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1">
+              <Sparkles size={8} className="animate-pulse" /> Needs AI
+           </span>
+        </div>
+      )}
+
+      {!needsEnrichment && !isEnriching && (
+        <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 border border-emerald-500/30 rounded backdrop-blur-md z-40 opacity-0 group-hover:opacity-100 transition-opacity">
+           <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
+              <CheckCircle2 size={8} /> AI Enhanced
+           </span>
+        </div>
+      )}
     </div>
     
-    <div className={`p-3 transition-colors duration-300 ${isSelected ? 'bg-indigo-950/20' : 'bg-[#0E0E10]'} border-t border-zinc-800`}>
-      <h3 className={`font-black text-[11px] truncate uppercase tracking-wider ${isSelected ? 'text-indigo-300' : 'text-white'}`}>
+    <div className={`p-3 transition-colors duration-300 ${isSelected ? 'bg-indigo-950/20' : 'bg-[#0E0E10]'} border-t border-zinc-800 relative`}>
+      {needsEnrichment && onEnrich && (
+        <button
+          onClick={(e) => onEnrich(e, game)}
+          disabled={isEnriching}
+          title="Enhance metadata with AI"
+          className="absolute right-2 top-2 p-1.5 z-20 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 rounded-md transition-colors disabled:opacity-50"
+        >
+           {isEnriching ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+        </button>
+      )}
+      <h3 className={`font-black text-[11px] truncate uppercase tracking-wider pr-6 ${isSelected ? 'text-indigo-300' : 'text-white'}`}>
         {game.title}
       </h3>
       <div className="flex items-center justify-between mt-1.5">
@@ -75,14 +142,19 @@ const GameCard = React.memo(({ game, isSelected, onClick, onDoubleClick }: { gam
       </div>
     </div>
   </motion.div>
-));
+)});
 
-export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGamesUpdate, onSwitchMode }) => {
+export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGamesUpdate, onSwitchMode, favorites, toggleFavorite, stats, onRecordLaunch }) => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(gamesProp[0] || null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [filterPlatform, setFilterPlatform] = useState('');
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const { t } = useLanguage();
+
+  const platforms = useMemo(() => {
+    return Array.from(new Set(gamesProp.map(g => g.platform))).sort();
+  }, [gamesProp]);
   
   const isMounted = useRef(true);
   useEffect(() => {
@@ -128,22 +200,19 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
   const enrichedGamesRef = useRef<Set<string>>(new Set());
 
   const handleAiScrape = useCallback(async (gameToScrape: Game, force = false) => {
-    if (isAiLoading || (!force && enrichedGamesRef.current.has(gameToScrape.id))) return;
-    setIsAiLoading(true);
+    if (enrichingIds.has(gameToScrape.id) || (!force && enrichedGamesRef.current.has(gameToScrape.id))) return;
+    
+    setEnrichingIds(prev => new Set(prev).add(gameToScrape.id));
     try {
       enrichedGamesRef.current.add(gameToScrape.id);
-      const res = await fetch('/api/ai/enrich', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: gameToScrape.title, platform: gameToScrape.platform })
-      });
-      if (!res.ok) throw new Error("API Failure");
-      const data = await res.json();
+      
+      const data = await aiOrchestrator.enrichGame(gameToScrape.title, gameToScrape.platform);
+      
       if (!isMounted.current) return;
       if (data) {
         onGamesUpdate(prev => prev.map(g => g.id === gameToScrape.id ? {
           ...g,
-          releaseYear: parseInt(data.year) || g.releaseYear,
+          releaseYear: parseInt(data.year || '0') || g.releaseYear,
           developer: data.developer || g.developer,
           genre: data.genre || g.genre,
           description: data.description || g.description,
@@ -152,7 +221,7 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         
         setSelectedGame(curr => curr?.id === gameToScrape.id ? {
           ...curr,
-          releaseYear: parseInt(data.year) || curr.releaseYear,
+          releaseYear: parseInt(data.year || '0') || curr.releaseYear,
           developer: data.developer || curr.developer,
           genre: data.genre || curr.genre,
           description: data.description || curr.description,
@@ -160,18 +229,33 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         } : curr);
       }
     } catch(err) {
-      console.error("AI Scrape error: ", err);
+      console.error("Neural Scrape Fault:", err);
     } finally {
-      if (isMounted.current) setIsAiLoading(false);
+      if (isMounted.current) {
+        setEnrichingIds(prev => {
+          const next = new Set(prev);
+          next.delete(gameToScrape.id);
+          return next;
+        });
+      }
     }
-  }, [isAiLoading, onGamesUpdate]);
+  }, [enrichingIds, onGamesUpdate]);
 
-  // Auto-enrichment on selection
+  // Auto-enrichment on selection (Neural Analysis)
   useEffect(() => {
-    if (selectedGame && (selectedGame.description.length < 50 || !selectedGame.suggestedCore)) {
-      handleAiScrape(selectedGame);
+    if (selectedGame) {
+      const needsEnrichment = !selectedGame.description || 
+                             selectedGame.description.length < 50 || 
+                             !selectedGame.suggestedCore || 
+                             selectedGame.releaseYear === 0 || 
+                             !selectedGame.genre || 
+                             selectedGame.genre === 'Unknown';
+                             
+      if (needsEnrichment) {
+        handleAiScrape(selectedGame);
+      }
     }
-  }, [selectedGame?.id, handleAiScrape]);
+  }, [selectedGame, handleAiScrape]);
   
   const handleUpdateCover = useCallback((gameId: string, newUrl: string) => {
     onGamesUpdate(prev => prev.map(g => g.id === gameId ? { ...g, coverArt: newUrl } : g));
@@ -209,11 +293,14 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         else coreId = localStorage.getItem('fliper_core_arcade') || 'mame';
       }
 
-      await fetch('/api/launch', {
+      await fetch('/api/games/launch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: selectedGame.id + '.rom', platform: selectedGame.platform, mode: mode.toUpperCase(), core: coreId })
+          body: JSON.stringify({ path: selectedGame.id + '.rom', platform: selectedGame.platform, mode: mode.toUpperCase(), core: coreId, title: selectedGame.title })
       });
+
+      // Record Launch to Firebase
+      if (selectedGame) await onRecordLaunch(selectedGame);
     } catch(err) {
       console.warn(err);
     } finally {
@@ -223,32 +310,76 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
     }
   }, [selectedGame, isLaunching]);
 
-  // Elite Optimization: Memoized filter to prevent layout thrashing on re-renders
+  // V9: Advanced Fuzzy Engine (Kodi-Inspired)
+  const fuse = useMemo(() => {
+    return new Fuse(gamesProp, {
+      keys: ['title', 'platform', 'developer', 'genre'],
+      threshold: 0.3,
+      distance: 100,
+      includeScore: true
+    });
+  }, [gamesProp]);
+
+  // Main Filtered Games Collection
   const filteredGames = useMemo(() => {
-    return gamesProp.filter(g => 
-      searchQuery === 'Japan Arcade' ? ['Arcade_JP', 'Naomi', 'NeoGeo'].includes(g.platform) :
-      g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.platform.toLowerCase().includes(searchQuery.toLowerCase())
-    ).sort((a, b) => a.title.localeCompare(b.title));
-  }, [gamesProp, searchQuery]);
+    let result = gamesProp;
+    
+    // Platform Filtering Logic (Kodi Facets)
+    if (filterPlatform) {
+       if (filterPlatform === 'FAVORITES') {
+          result = result.filter(g => favorites.has(g.id));
+       } else if (filterPlatform === 'RECENT') {
+          result = result
+            .filter(g => stats[g.id]?.lastPlayed)
+            .sort((a, b) => {
+              const dateA = stats[a.id]?.lastPlayed?.seconds || 0;
+              const dateB = stats[b.id]?.lastPlayed?.seconds || 0;
+              return dateB - dateA;
+            });
+          return result; // Already sorted
+       } else if (filterPlatform === 'Japan Arcade') {
+          result = result.filter(g => ['Arcade_JP', 'Naomi', 'NeoGeo'].includes(g.platform));
+       } else {
+          result = result.filter(g => g.platform.includes(filterPlatform));
+       }
+    }
+
+    // Advanced Neural Search (Search Box)
+    if (searchQuery) {
+      const searchResults = fuse.search(searchQuery);
+      return searchResults.map(r => r.item);
+    }
+
+    return result.sort((a, b) => a.title.localeCompare(b.title));
+  }, [gamesProp, searchQuery, filterPlatform, fuse]);
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   return (
     <div className="flex h-full w-full bg-[#121212] text-zinc-300">
       {/* Sidebar - Technical Grid Style */}
-      <div className="w-64 bg-[#0A0A0B] border-r border-zinc-800 flex flex-col z-10 transition-all duration-300">
+      <div className="w-65 bg-[#0A0A0B] border-r border-zinc-800 flex flex-col z-10 transition-all duration-300">
         <div className="px-4 py-6 border-b border-zinc-800 bg-[#0C0C0E]">
           <h1 className="text-xl font-black text-white italic tracking-tighter mb-4 flex items-center gap-2">
             <Database size={20} className="text-indigo-500" /> FLIPER.OS
           </h1>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <div className="relative group/search">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within/search:text-indigo-500 transition-colors" />
             <input 
               type="text" 
               placeholder={t('search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#121214] rounded-lg py-2 pl-9 pr-4 text-[11px] text-white placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 border border-zinc-800 transition-all font-mono"
+              className="w-full bg-[#121214] rounded-lg py-2 pl-9 pr-8 text-[11px] text-white placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 border border-zinc-800 transition-all font-mono"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white p-0.5"
+              >
+                <Info size={10} className="rotate-45" /> {/* Close-like icon */}
+              </button>
+            )}
           </div>
         </div>
 
@@ -257,21 +388,26 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
             {t('platforms')}
           </div>
           {[
-            { id: '', label: t('all_games'), count: gamesProp.length },
-            { id: 'Japan Arcade', label: 'Japan Arcade', count: gamesProp.filter(g => ['Arcade_JP', 'Naomi', 'NeoGeo'].includes(g.platform)).length },
+            { id: '', label: t('all_games'), count: gamesProp.length, icon: <Database size={10} /> },
+            { id: 'FAVORITES', label: 'Favorites', count: favorites.size, icon: <Heart size={10} className="fill-rose-500 text-rose-500" /> },
+            { id: 'RECENT', label: 'Recently Played', count: Object.keys(stats).length, icon: <Clock size={10} className="text-emerald-500" /> },
+            { id: 'Japan Arcade', label: 'Japan Arcade', count: gamesProp.filter(g => ['Arcade_JP', 'Naomi', 'NeoGeo'].includes(g.platform)).length, icon: <Zap size={10} className="text-amber-500" /> },
             { id: 'SNES', label: 'Super Nintendo', count: gamesProp.filter(g => g.platform.includes('SNES')).length },
             { id: 'NES', label: 'NES', count: gamesProp.filter(g => g.platform.includes('NES')).length },
           ].map((pt) => (
             <button 
               key={pt.label}
-              onClick={() => setSearchQuery(pt.id)} 
+              onClick={() => setFilterPlatform(pt.id)} 
               className={`w-full text-left px-5 py-2.5 flex items-center justify-between group transition-all ${
-                searchQuery === pt.id 
+                filterPlatform === pt.id 
                   ? 'bg-zinc-800/40 border-r-2 border-indigo-500 text-white' 
                   : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/20'
               }`}
             >
-              <span className="text-[11px] font-bold tracking-tight">{pt.label}</span>
+              <div className="flex items-center gap-2">
+                {pt.icon}
+                <span className="text-[11px] font-bold tracking-tight">{pt.label}</span>
+              </div>
               <span className="text-[9px] font-mono opacity-40 group-hover:opacity-100">{pt.count}</span>
             </button>
           ))}
@@ -280,12 +416,12 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         <div className="p-4 border-t border-[#2A2A2D]">
            <button 
               onClick={() => { if(selectedGame) handleAiScrape(selectedGame, true); }}
-              disabled={isAiLoading || !selectedGame}
+              disabled={enrichingIds.size > 0 || !selectedGame}
               title="(Pro Feature) Enriquecer Metadata via LLM Local/Remota"
               className="w-full flex items-center justify-center gap-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white py-2 rounded-md text-sm font-medium transition-colors mb-2 disabled:opacity-50"
            >
-              {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 
-              {isAiLoading ? 'Processando (AI)...': t('ai_enhance')}
+              {enrichingIds.size > 0 ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 
+              {enrichingIds.size > 0 ? 'Processando (AI)...': t('ai_enhance')}
            </button>
            <button 
               onClick={onSwitchMode}
@@ -386,19 +522,149 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
           )}
         </AnimatePresence>
 
-        {/* Game Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredGames.map(game => (
-               <GameCard 
-                 key={game.id} 
-                 game={game} 
-                 isSelected={selectedGame?.id === game.id} 
-                 onClick={setSelectedGame} 
-                 onDoubleClick={() => setIsDetailModalOpen(true)}
-               />
-            ))}
-          </div>
+        {/* Game Grid Header / Filter Bar */}
+        <div className="px-6 py-4 border-b border-zinc-800/50 flex items-center justify-between bg-[#0C0C0E]/80 backdrop-blur-3xl shrink-0">
+           <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">System Filter</span>
+                 <div className="relative group">
+                    <select 
+                      value={filterPlatform} 
+                      onChange={(e) => setFilterPlatform(e.target.value)}
+                      className="bg-zinc-900 border border-zinc-800 text-[11px] font-black text-white rounded-lg pl-3 pr-8 py-2 outline-none focus:ring-1 focus:ring-indigo-500 transition-all appearance-none cursor-pointer uppercase tracking-tighter"
+                    >
+                      <option value="">All Systems</option>
+                      <optgroup label="Metadata Filters">
+                        <option value="FAVORITES">Collections: Favorites</option>
+                        <option value="RECENT">Collections: Recent</option>
+                      </optgroup>
+                      <optgroup label="Platform Library">
+                        {platforms.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                       <Database size={10} />
+                    </div>
+                 </div>
+              </div>
+
+              <div className="w-px h-8 bg-zinc-800" />
+
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Library View</span>
+                 <div className="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800">
+                    <button 
+                      onClick={() => setViewMode('grid')}
+                      className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-tighter transition-all ${
+                        viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                       Grid
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('list')}
+                      className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-tighter transition-all ${
+                        viewMode === 'list' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                       List
+                    </button>
+                 </div>
+              </div>
+           </div>
+
+           <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
+                 <p className="text-[10px] font-black text-white uppercase tracking-tighter">{filteredGames.length} Objects Found</p>
+                 <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Index: Latency Optimized</p>
+              </div>
+           </div>
+        </div>
+
+        {/* Game Grid / List */}
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {filteredGames.map(game => (
+                <GameCard 
+                  key={game.id} 
+                  game={game} 
+                  isSelected={selectedGame?.id === game.id} 
+                  onClick={setSelectedGame} 
+                  onDoubleClick={() => setIsDetailModalOpen(true)}
+                  onEnrich={(e: React.MouseEvent, g: Game) => { 
+                    e.stopPropagation(); 
+                    setSelectedGame(g); 
+                    handleAiScrape(g, true); 
+                  }}
+                  isEnriching={enrichingIds.has(game.id)}
+                  isFavorite={favorites.has(game.id)}
+                  onToggleFavorite={toggleFavorite}
+                  stats={stats[game.id]}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+               {filteredGames.map(game => {
+                 const needsEnrichment = !game.description || game.description.length < 50 || !game.suggestedCore || !game.releaseYear || !game.genre;
+                 const isEnriching = enrichingIds.has(game.id);
+                 return (
+                    <div 
+                      key={game.id}
+                      onClick={() => setSelectedGame(game)}
+                      onDoubleClick={() => setIsDetailModalOpen(true)}
+                      className={`flex items-center gap-4 p-2 rounded-lg cursor-pointer transition-all ${
+                        selectedGame?.id === game.id ? 'bg-indigo-600/20 border border-indigo-500/30' : 'hover:bg-zinc-800/40 border border-transparent'
+                      }`}
+                    >
+                       <div className="w-10 h-14 bg-zinc-900 rounded overflow-hidden shrink-0 border border-white/5">
+                          <img src={game.coverArt} className="w-full h-full object-cover" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                             <h4 className={`text-[11px] font-black uppercase tracking-tight truncate ${selectedGame?.id === game.id ? 'text-white' : 'text-zinc-400'}`}>
+                                {game.title}
+                             </h4>
+                             {favorites.has(game.id) && <Heart size={10} className="fill-rose-500 text-rose-500 shrink-0" />}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                             <span className="text-[9px] font-bold text-zinc-600 uppercase">{game.platform}</span>
+                             <span className="text-[9px] font-mono text-zinc-700">{game.releaseYear}</span>
+                          </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-4 shrink-0 px-4">
+                          {isEnriching ? (
+                             <Loader2 size={12} className="animate-spin text-indigo-400" />
+                          ) : (
+                             <>
+                               {needsEnrichment ? (
+                                  <Sparkles size={12} className="text-amber-500/40" />
+                               ) : (
+                                  <CheckCircle2 size={12} className="text-emerald-500/40" />
+                               )}
+                             </>
+                          )}
+                          <div className="w-24 text-right">
+                             <span className="text-[9px] font-mono text-zinc-600 uppercase truncate block">
+                                {game.suggestedCore || '---'}
+                             </span>
+                          </div>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(game.id); }}
+                            className={`p-1.5 rounded hover:bg-zinc-700 transition-colors ${favorites.has(game.id) ? 'text-rose-500' : 'text-zinc-600'}`}
+                          >
+                             <Star size={14} fill={favorites.has(game.id) ? "currentColor" : "none"} />
+                          </button>
+                       </div>
+                    </div>
+                 );
+               })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -408,8 +674,11 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = ({ gamesProp, onGam
         onClose={() => setIsDetailModalOpen(false)}
         onLaunch={handleLaunch}
         onEnrich={async () => { if(selectedGame) handleAiScrape(selectedGame, true); }}
-        isEnriching={isAiLoading}
+        isEnriching={selectedGame ? enrichingIds.has(selectedGame.id) : false}
         onUpdateCover={handleUpdateCover}
+        isFavorite={selectedGame ? favorites.has(selectedGame.id) : false}
+        onToggleFavorite={toggleFavorite}
+        stats={selectedGame ? stats[selectedGame.id] : null}
       />
     </div>
   );

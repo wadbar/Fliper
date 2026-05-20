@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Play, Clock, Trophy, Award, Calendar, User, Tag, Sparkles, Cpu, Zap, ShieldCheck, Palette } from 'lucide-react';
+import { X, Play, Clock, Trophy, Award, Calendar, User, Tag, Sparkles, Cpu, Zap, ShieldCheck, Palette, Heart, Loader2 } from 'lucide-react';
 import { Game } from '../../data/games';
 import { AiArtGenerator } from '../apps/AiArtGenerator';
+import { ThreeDGameCartridge } from '../ui/ThreeDGameCartridge';
 
 interface GameDetailsModalProps {
   game: Game | null;
@@ -12,6 +13,9 @@ interface GameDetailsModalProps {
   onEnrich?: (gameId: string) => Promise<void>;
   isEnriching?: boolean;
   onUpdateCover?: (gameId: string, newUrl: string) => void;
+  isFavorite: boolean;
+  onToggleFavorite: (id: string) => void;
+  stats?: any;
 }
 
 export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({ 
@@ -21,11 +25,37 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   onLaunch, 
   onEnrich, 
   isEnriching,
-  onUpdateCover
+  onUpdateCover,
+  isFavorite,
+  onToggleFavorite,
+  stats
 }) => {
   const [showGenerator, setShowGenerator] = useState(false);
-  
-  if (!game) return null;
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
+  const [activeInfoTab, setActiveInfoTab] = useState<'info' | 'achievements' | '3d'>('info');
+
+  React.useEffect(() => {
+    if (isOpen && game && activeInfoTab === 'achievements' && achievements.length === 0) {
+      const fetchAchievements = async () => {
+        setLoadingAchievements(true);
+        try {
+          const res = await fetch('/api/ai/achievements/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: game.title, platform: game.platform, gameId: game.id })
+          });
+          const data = await res.json();
+          if (data && data.list) setAchievements(data.list);
+        } catch (e) {
+          console.error("Achieve load failed", e);
+        } finally {
+          setLoadingAchievements(false);
+        }
+      };
+      fetchAchievements();
+    }
+  }, [isOpen, game, activeInfoTab, achievements.length]);
 
   const handleEnrich = async () => {
     if (onEnrich) {
@@ -116,6 +146,13 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 >
                   <Play size={18} fill="currentColor" /> Play Now
                 </button>
+
+                <button 
+                  onClick={() => game && onToggleFavorite(game.id)}
+                  className={`w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-lg font-bold transition-all active:scale-95 border ${isFavorite ? 'bg-rose-600/20 border-rose-600 text-rose-500' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
+                >
+                  <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /> {isFavorite ? 'Favorited' : 'Add to Favs'}
+                </button>
                 
                 {/* Advanced Actions */}
                 <div className="mt-6 space-y-2">
@@ -203,61 +240,151 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 </div>
                 <h2 className="text-4xl font-black text-white mb-4 tracking-tighter">{game.title}</h2>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                   <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
-                      <div className="flex items-center gap-2 text-zinc-500 mb-1">
-                         <Calendar size={14} />
-                         <span className="text-[10px] uppercase font-bold">Year</span>
-                      </div>
-                      <p className="text-white font-semibold">{game.releaseYear}</p>
-                   </div>
-                   <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
-                      <div className="flex items-center gap-2 text-zinc-500 mb-1">
-                         <Tag size={14} />
-                         <span className="text-[10px] uppercase font-bold">Genre</span>
-                      </div>
-                      <p className="text-white font-semibold">{game.genre}</p>
-                   </div>
-                   <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
-                      <div className="flex items-center gap-2 text-zinc-500 mb-1">
-                         <User size={14} />
-                         <span className="text-[10px] uppercase font-bold">Maker</span>
-                      </div>
-                      <p className="text-white font-semibold truncate">{game.developer}</p>
-                   </div>
-                   <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
-                      <div className="flex items-center gap-2 text-zinc-500 mb-1">
-                         <Award size={14} />
-                         <span className="text-[10px] uppercase font-bold">Rating</span>
-                      </div>
-                      <p className="text-white font-semibold">9.5 / 10</p>
-                   </div>
+                <div className="flex items-center gap-6 border-b border-zinc-800 mb-6">
+                   <button 
+                     onClick={() => setActiveInfoTab('info')}
+                     className={`pb-2 text-sm font-bold uppercase tracking-widest transition-all relative ${activeInfoTab === 'info' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                   >
+                     General Info
+                     {activeInfoTab === 'info' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />}
+                   </button>
+                   <button 
+                     onClick={() => setActiveInfoTab('achievements')}
+                     className={`pb-2 text-sm font-bold uppercase tracking-widest transition-all relative flex items-center gap-2 ${activeInfoTab === 'achievements' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                   >
+                     Achievements
+                     <Trophy size={14} className={activeInfoTab === 'achievements' ? 'text-yellow-500' : 'text-zinc-600'} />
+                     {activeInfoTab === 'achievements' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />}
+                   </button>
+                   <button 
+                     onClick={() => setActiveInfoTab('3d')}
+                     className={`pb-2 text-sm font-bold uppercase tracking-widest transition-all relative flex items-center gap-2 ${activeInfoTab === '3d' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                   >
+                     3D Model
+                     <Cpu size={14} className={activeInfoTab === '3d' ? 'text-indigo-400' : 'text-zinc-600'} />
+                     {activeInfoTab === '3d' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />}
+                   </button>
                 </div>
 
-                <div className="space-y-4">
-                   <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-widest border-b border-zinc-800 pb-2">Description</h3>
-                   <p className="text-zinc-400 leading-relaxed text-sm">
-                      {game.description}
-                   </p>
-                </div>
+                <AnimatePresence mode="wait">
+                  {activeInfoTab === 'info' ? (
+                    <motion.div 
+                      key="info"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                    >
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                         <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                            <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                               <Calendar size={14} />
+                               <span className="text-[10px] uppercase font-bold">Year</span>
+                            </div>
+                            <p className="text-white font-semibold">{game.releaseYear}</p>
+                         </div>
+                         <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                            <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                               <Tag size={14} />
+                               <span className="text-[10px] uppercase font-bold">Genre</span>
+                            </div>
+                            <p className="text-white font-semibold">{game.genre}</p>
+                         </div>
+                         <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                            <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                               <User size={14} />
+                               <span className="text-[10px] uppercase font-bold">Maker</span>
+                            </div>
+                            <p className="text-white font-semibold truncate">{game.developer}</p>
+                         </div>
+                         <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                            <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                               <Award size={14} />
+                               <span className="text-[10px] uppercase font-bold">Rating</span>
+                            </div>
+                            <p className="text-white font-semibold">9.5 / 10</p>
+                         </div>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-widest border-b border-zinc-800 pb-2">Description</h3>
+                         <p className="text-zinc-400 leading-relaxed text-sm">
+                            {game.description}
+                         </p>
+                      </div>
+                    </motion.div>
+                  ) : activeInfoTab === '3d' ? (
+                    <motion.div 
+                      key="3d"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-zinc-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/10"
+                    >
+                       <ThreeDGameCartridge coverUrl={game.coverArt || ''} />
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="achievements"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="space-y-4"
+                    >
+                      {loadingAchievements ? (
+                        <div className="py-12 flex flex-col items-center justify-center gap-4">
+                           <Loader2 size={32} className="text-indigo-500 animate-spin" />
+                           <p className="text-xs font-mono text-zinc-500 animate-pulse">Consulting Neural Archives for Game Milestones...</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-3">
+                          {achievements.map((ach: any) => (
+                            <div key={ach.id} className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl flex items-center gap-4 group hover:bg-zinc-800/50 transition-all">
+                               <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border ${
+                                 ach.difficulty === 'legendary' ? 'bg-amber-500/20 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' :
+                                 ach.difficulty === 'hard' ? 'bg-rose-500/20 border-rose-500' :
+                                 ach.difficulty === 'medium' ? 'bg-indigo-500/20 border-indigo-500' : 'bg-zinc-800 border-zinc-700 text-zinc-500'
+                               }`}>
+                                  {ach.difficulty === 'legendary' ? <Trophy size={20} className="text-amber-500" /> : <Award size={20} className={ach.difficulty === 'hard' ? 'text-rose-500' : ach.difficulty === 'medium' ? 'text-indigo-400' : 'text-zinc-500'} />}
+                               </div>
+                               <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                     <h4 className="font-bold text-sm text-white">{ach.title}</h4>
+                                     <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                                        ach.difficulty === 'legendary' ? 'bg-amber-500 text-black' :
+                                        ach.difficulty === 'hard' ? 'bg-rose-500 text-white' :
+                                        ach.difficulty === 'medium' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-300'
+                                     }`}>{ach.difficulty}</span>
+                                  </div>
+                                  <p className="text-xs text-zinc-400 line-clamp-1">{ach.description}</p>
+                               </div>
+                            </div>
+                          ))}
+                          <div className="p-4 rounded-xl border border-dashed border-zinc-800 flex items-center justify-center text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em]">
+                             More Secrets to be Discovered
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="mt-8 grid grid-cols-2 gap-4">
+                   <div className="flex items-center gap-4 text-zinc-500">
+                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
+                         <Play size={18} className="text-emerald-400" />
+                      </div>
+                      <div>
+                         <p className="text-[10px] uppercase font-bold">Launch Count</p>
+                         <p className="text-zinc-300 text-sm">{stats?.playCount || 0} times</p>
+                      </div>
+                   </div>
                    <div className="flex items-center gap-4 text-zinc-500">
                       <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
                          <Clock size={18} />
                       </div>
                       <div>
-                         <p className="text-[10px] uppercase font-bold">Total Playtime</p>
-                         <p className="text-zinc-300 text-sm">24h 12m</p>
-                      </div>
-                   </div>
-                   <div className="flex items-center gap-4 text-zinc-500">
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
-                         <Trophy size={18} className="text-yellow-500" />
-                      </div>
-                      <div>
-                         <p className="text-[10px] uppercase font-bold">Achievements</p>
-                         <p className="text-zinc-300 text-sm">12 / 48 unlocked</p>
+                         <p className="text-[10px] uppercase font-bold">Last Played</p>
+                         <p className="text-zinc-300 text-sm italic">{stats?.lastPlayed ? new Date(stats.lastPlayed.seconds * 1000).toLocaleDateString() : 'Never'}</p>
                       </div>
                    </div>
                 </div>

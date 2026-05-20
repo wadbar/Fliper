@@ -88,6 +88,7 @@ export const StorageApp: React.FC = () => {
 
   useEffect(() => {
     refresh();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentFiles = tab === 'local' ? localFiles : cloudFiles;

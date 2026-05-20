@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DesktopMode } from './components/DesktopMode';
 import { FliperMode } from './components/FliperMode';
 import { games } from './data/games';
@@ -6,6 +6,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Terminal } from 'lucide-react';
 import { TelemetryWidget } from './components/TelemetryWidget';
 import { TaskMonitor } from './components/ui/TaskMonitor';
+import { useFirebaseSync } from './hooks/useFirebaseSync';
+import { useGamepad } from './hooks/useGamepad';
+import { useSystemSettings } from './hooks/useSystemSettings';
+import { audioEngine } from './services/audioEngine';
+import { EmulatorOverlay } from './components/EmulatorOverlay';
+import { CommandPalette } from './components/ui/CommandPalette';
+import { Game } from './data/games';
 
 type AppMode = 'boot' | 'desktop' | 'fliper';
 
@@ -13,6 +20,46 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>('boot');
   const [cocktailMode, setCocktailMode] = useState(false);
   const [gamesList, setGamesList] = useState(games);
+  
+  const { user, favorites, stats, loading, login, logout, toggleFavorite, recordLaunch } = useFirebaseSync();
+  const { settings, updateSetting } = useSystemSettings();
+  const [runningGame, setRunningGame] = useState<Game | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // V9: Gamepad & Audio Integration
+  const handleGamepadAction = useCallback((action: string) => {
+    if (runningGame && action === 'B') {
+      setRunningGame(null);
+      return;
+    }
+    
+    switch(action) {
+      case 'A':
+      case 'START':
+        audioEngine.play('click');
+        break;
+      case 'B':
+      case 'SELECT':
+        audioEngine.play('hover');
+        break;
+      case 'UP':
+      case 'DOWN':
+      case 'LEFT':
+      case 'RIGHT':
+        audioEngine.play('hover');
+        break;
+    }
+  }, []);
+
+  useGamepad(handleGamepadAction);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      audioEngine.play('click');
+    };
+    window.addEventListener('mousedown', handleGlobalClick);
+    return () => window.removeEventListener('mousedown', handleGlobalClick);
+  }, []);
 
   const [bootLogs, setBootLogs] = useState<string[]>([]);
   const [bootProgress, setBootProgress] = useState(0);
@@ -62,6 +109,14 @@ export default function App() {
 
   useEffect(() => {
     const handleGlobalKey = (e: KeyboardEvent) => {
+      // Neural Command Palette (Ctrl+K or Cmd+K)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        audioEngine.play('nav');
+        return;
+      }
+
       if (e.key === 'r' || e.key === 'R') {
         setCocktailMode(prev => !prev);
       }
@@ -70,8 +125,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKey);
   }, []);
 
+  const handleLaunchGame = async (game: Game) => {
+    setRunningGame(game);
+    await recordLaunch(game.id);
+  };
+
   return (
-    <div className={`w-full h-screen bg-[#050505] overflow-hidden font-sans transition-all duration-1000 ${cocktailMode ? 'rotate-180' : ''}`}>
+    <div 
+      className={`w-full h-screen bg-[#050505] overflow-hidden font-sans transition-all duration-1000 ${cocktailMode ? 'rotate-180' : ''}`}
+      style={{ filter: `brightness(${settings.brightness})` }}
+    >
       <div className="absolute inset-0 arcade-grid pointer-events-none opacity-20" />
       <div className="absolute inset-0 kernel-gradient pointer-events-none" />
       <div className="scanline absolute inset-0 opacity-10" />
@@ -134,7 +197,20 @@ export default function App() {
             transition={{ duration: 0.4 }}
             className="w-full h-full"
           >
-            <DesktopMode games={gamesList} onGamesUpdate={setGamesList} onSwitchMode={() => setMode('fliper')} />
+            <DesktopMode 
+              games={gamesList} 
+              onGamesUpdate={setGamesList} 
+              onSwitchMode={() => setMode('fliper')}
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+              user={user}
+              onLogin={login}
+              onLogout={logout}
+              stats={stats}
+              onRecordLaunch={handleLaunchGame}
+              settings={settings}
+              updateSetting={updateSetting}
+            />
           </motion.div>
         ) : (
           <motion.div
@@ -145,10 +221,40 @@ export default function App() {
             transition={{ duration: 0.6 }}
             className="w-full h-full"
           >
-            <FliperMode games={gamesList} onGamesUpdate={setGamesList} onExit={() => setMode('desktop')} />
+            <FliperMode 
+              games={gamesList} 
+              onGamesUpdate={setGamesList} 
+              onExit={() => setMode('desktop')}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              user={user}
+              onLogin={login}
+              stats={stats}
+              onRecordLaunch={handleLaunchGame}
+            />
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {runningGame && (
+          <EmulatorOverlay 
+            game={runningGame} 
+            onClose={() => setRunningGame(null)} 
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isCommandPaletteOpen && (
+          <CommandPalette 
+            isOpen={isCommandPaletteOpen}
+            onClose={() => setIsCommandPaletteOpen(false)}
+            onLaunch={handleLaunchGame}
+          />
+        )}
+      </AnimatePresence>
+
       <TelemetryWidget />
       <TaskMonitor />
     </div>

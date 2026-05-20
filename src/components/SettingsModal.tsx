@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { X, Cpu, HardDrive, Monitor, Gamepad2, Wrench, FolderOpen, Zap } from 'lucide-react';
+import { X, Cpu, HardDrive, Monitor, Gamepad2, Wrench, FolderOpen, Zap, Bell, Shield } from 'lucide-react';
+import { useSystemSettings } from '../hooks/useSystemSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, inWindowMode }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { settings, updateSetting } = useSystemSettings();
   const [activeTab, setActiveTab] = React.useState('performance');
   
   const [lbPath, setLbPath] = React.useState(() => localStorage.getItem('fliper_lb_path') || 'C:\\LaunchBox');

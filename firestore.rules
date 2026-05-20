@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Safety Net: Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPER PRIMITIVES ---
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- VALIDATION BLUEPRINTS ---
+    function isValidGame(data) {
+      return data.keys().hasAll(['id', 'title', 'platform']) &&
+             data.id is string && data.id.size() <= 64 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.platform is string && data.platform.size() <= 50;
+    }
+
+    function isValidFavorite(data) {
+      return data.keys().hasAll(['gameId', 'addedAt']) &&
+             data.gameId is string && data.gameId.size() <= 64 &&
+             data.addedAt == request.time;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // Global Games Registry
+    match /games/{gameId} {
+      allow read: if true; // Public Discovery
+      allow write: if false; // System-only write via Server (Admin SDK)
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      // PII Isolation: Only internal owner can read/write profile
+      allow read, write: if isOwner(userId) && isValidId(userId);
+    }
+
+    // Favorites (Sub-collection)
+    match /users/{userId}/favorites/{favId} {
+      allow list: if isOwner(userId) && isValidId(userId);
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && 
+                      isValidId(userId) && 
+                      isValidFavorite(incoming()) &&
+                      exists(/databases/$(database)/documents/games/$(incoming().gameId));
+      allow delete: if isOwner(userId);
+    }
+
+    // Stats & Achievements
+    match /users/{userId}/stats/{gameId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/achievements/{achId} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}

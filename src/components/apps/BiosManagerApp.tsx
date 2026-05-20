@@ -45,18 +45,29 @@ export const BiosManagerApp: React.FC = () => {
     };
   }, []);
 
-  const scanBios = () => {
+  const scanBios = async () => {
     setIsScanning(true);
     setFiles(prev => prev.map(f => ({ ...f, status: 'checking' })));
-    
-    setTimeout(() => {
-      if (!isMountedRef.current) return;
-      setFiles(prev => prev.map(f => ({
-        ...f,
-        status: Math.random() > 0.3 ? 'valid' : 'missing'
-      })));
-      setIsScanning(false);
-    }, 2000);
+    try {
+       const res = await fetch('/api/system/kernel/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'ls -la /roms/bios 2>/dev/null || echo ""' })
+       });
+       if (res.ok) {
+          const { output } = await res.json();
+          const presentFiles = output.split('\n').map((line: string) => line.split(' ').pop());
+          setFiles(prev => prev.map(f => ({
+             ...f,
+             status: presentFiles.includes(f.name) ? 'valid' : 'missing'
+          })));
+       }
+    } catch(err) {
+       console.error("BIOS Scan Error", err);
+       setFiles(prev => prev.map(f => ({ ...f, status: 'missing' })));
+    } finally {
+       if (isMountedRef.current) setIsScanning(false);
+    }
   };
 
   return (

@@ -4,11 +4,12 @@ import { motion } from 'motion/react';
 
 // Telemetry Widget for Real-Time Performance & Resiliency Monitoring
 export const TelemetryWidget: React.FC = () => {
-  const [metrics, setMetrics] = useState({
+  const [metrics, setMetrics] = useState<any>({
     fps: 60,
     latency: 0,
     memory: 0,
-    mode: 'STABLE'
+    mode: 'STABLE',
+    aiStats: null
   });
 
   const [expanded, setExpanded] = useState(false);
@@ -32,36 +33,37 @@ export const TelemetryWidget: React.FC = () => {
 
     animationFrameId = requestAnimationFrame(measureFPS);
 
-    let abortController = new AbortController();
+    const abortController = new AbortController();
 
-    // Simulate real ping check
-    const pingInterval = setInterval(async () => {
-      if (!isMounted) return;
-      const start = performance.now();
+    // V9 SUPREME: SSE Telemetry Integration
+    const eventSource = new EventSource('/api/ai/telemetry');
+    
+    eventSource.onmessage = (event) => {
       try {
-        await fetch('/api/games', { signal: abortController.signal });
-        const end = performance.now();
-        const latency = Math.round(end - start);
+        const stats = JSON.parse(event.data);
         if (isMounted) {
           setMetrics(prev => ({ 
             ...prev, 
-            latency,
+            latency: stats.avgLatency || 0,
             memory: (performance as any).memory ? Math.round((performance as any).memory.usedJSHeapSize / 1024 / 1024) : 0,
-            mode: latency > 500 ? 'DEGRADED' : 'STABLE'
+            mode: stats.lastError ? 'DEGRADED' : 'STABLE',
+            aiStats: stats
           }));
         }
-      } catch (e: any) {
-        if (e.name !== 'AbortError' && isMounted) {
-          setMetrics(prev => ({ ...prev, mode: 'OFFLINE' }));
-        }
+      } catch (err) {
+        console.error("Telemetry Stream Parse Error", err);
       }
-    }, 5000);
+    };
+
+    eventSource.onerror = () => {
+      if (isMounted) setMetrics(prev => ({ ...prev, mode: 'OFFLINE' }));
+    };
 
     return () => {
       isMounted = false;
+      eventSource.close();
       abortController.abort();
       cancelAnimationFrame(animationFrameId);
-      clearInterval(pingInterval);
     };
   }, []);
 
@@ -111,6 +113,28 @@ export const TelemetryWidget: React.FC = () => {
           <span>Security Level</span>
           <span className="text-emerald-500 border border-emerald-500/30 px-1 rounded-[2px] text-[10px]">HARDENED</span>
         </div>
+
+        {/* AI NODE RESILIENCE MATRIX */}
+        {metrics.aiStats?.breakers && (
+          <div className="pt-2 mt-2 border-t border-zinc-800">
+            <div className="text-[10px] text-zinc-500 mb-2 uppercase tracking-tight">AI & Fiber Node Matrix</div>
+            <div className="grid grid-cols-4 gap-1">
+              {Object.entries(metrics.aiStats.breakers).map(([id, b]: [string, any]) => (
+                <div key={id} className="flex flex-col items-center p-1.5 bg-zinc-900/50 rounded border border-zinc-800">
+                  <span className="text-[8px] uppercase opacity-60 mb-1">{id}</span>
+                  <div className={`w-1.5 h-1.5 rounded-full ${
+                    b.status === 'CLOSED' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 
+                    b.status === 'HALF-OPEN' ? 'bg-amber-400' : 'bg-rose-500'
+                  }`} />
+                </div>
+              ))}
+              <div className="flex flex-col items-center p-1.5 bg-zinc-900/50 rounded border border-zinc-800">
+                  <span className="text-[8px] uppercase opacity-60 mb-1">FBR</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.5)]" title="React Fiber Stable" />
+              </div>
+            </div>
+          </div>
+        )}
         {metrics.memory > 0 && (
            <div className="w-full h-1 bg-zinc-800 rounded-full mt-2 overflow-hidden">
              <motion.div 

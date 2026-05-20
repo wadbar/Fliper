@@ -1,6 +1,6 @@
 {
-  "name": "FliperOS Sovereign V8",
-  "description": "Industrial-grade Retrogaming Ecosystem powered by the Sovereign AI V8 architecture. Features multi-tier neural fallback pipelines, real-time SRE telemetry, and predictive system optimization.",
+  "name": "FliperOS Ultimate V9",
+  "description": "The definitive 100% functional retrogaming workstation. Features 3D Fiber rendering, Neural Fuse search, real-time Firebase cloud-sync, and AI-driven achievement synthesis.",
   "requestFramePermissions": [
     "camera",
     "microphone",

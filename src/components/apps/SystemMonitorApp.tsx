@@ -112,7 +112,7 @@ export const SystemMonitorApp: React.FC = () => {
     fetchGpuInfo();
 
     let isMounted = true;
-    let abortController = new AbortController();
+    const abortController = new AbortController();
 
     const fetchTelemetry = async (signal?: AbortSignal) => {
       if (!isMounted) return;

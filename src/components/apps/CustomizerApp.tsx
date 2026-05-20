@@ -3,11 +3,11 @@ import { Settings, Cpu, Package, HardDrive, Play, Shield, Terminal, Loader2, Sav
 import { motion, AnimatePresence } from 'motion/react';
 
 export const CustomizerApp: React.FC = () => {
-    const [base, setBase] = useState<'arch' | 'debian' | 'alpine'>('arch');
-    const [kernel, setKernel] = useState<'zen' | 'hardened' | 'lts' | 'realtime'>('zen');
-    const [arch, setArch] = useState<'x86_64' | 'i686' | 'aarch64' | 'armhf'>('x86_64');
-    const [profile, setProfile] = useState<'adaptive' | 'legacy_lite' | 'extreme_workstation'>('adaptive');
-    const [desktop, setDesktop] = useState<'fliper-shell' | 'minimal' | 'plasma'>('fliper-shell');
+    const [base, setBase] = useState<'arch' | 'debian' | 'alpine' | 'universal-hybrid'>('arch');
+    const [kernel, setKernel] = useState<'zen' | 'hardened' | 'lts' | 'realtime' | 'adaptive-multikernel'>('zen');
+    const [arch, setArch] = useState<'x86_64' | 'i686' | 'aarch64' | 'armhf' | 'multi-arch-wrap'>('x86_64');
+    const [profile, setProfile] = useState<'adaptive' | 'legacy_lite' | 'extreme_workstation' | 'sovereign-universal'>('adaptive');
+    const [desktop, setDesktop] = useState<'fliper-shell' | 'minimal' | 'plasma' | 'fluid-dynamic'>('fliper-shell');
     const [packages, setPackages] = useState<string>("retroarch, mesa, vulkan-intel, networkmanager, wine-staging, flatpak, appimage-run");
     const [extensions, setExtensions] = useState<string[]>([]);
     const [compatibilityLayers, setCompatibilityLayers] = useState<string[]>(['wine', 'appimage']);
@@ -34,30 +34,32 @@ export const CustomizerApp: React.FC = () => {
 
     const runAiHardwareProbe = async () => {
         setAiProbing(true);
-        setProbeLogs([]);
-        const logs = [
-            "Initializing FliperOS Kernel AI (Live Media Mode)...",
-            "Checking boot source logic: Path identified as /dev/sdb1 (External USB)",
-            "Executing 'lspci -nnk' via KernelProxy bridge...",
-            "Detected GPU: [8086:9b41] Intel UHD Graphics 620 (Whiskey Lake)",
-            "Detected CPU: Intel Core i7-8565U (8) @ 4.600GHz",
-            "Hardware Class: ULTRABOOK_MOBILE_GEN8",
-            "AI DECISION: Remote Brain unreachable? No problem. Using local heuristics...",
-            "Applying Intel P-State scaling fix for extreme energy efficiency...",
-            "COMPATIBILITY_ORACLE: Proton 9.0 (Experimental) + Proton-GE identified as primary runtimes.",
-            "PROTON_TUNER: Injecting DXVK-Cache and Fsync patches for [Nitro] efficiency.",
-            "Injected: Box64/Box86 wrapper for legacy x86 binary support on non-standard ISA (Phone/Pi).",
-            "STEAM_INTEGRATION: Activating Steam-Native and pressure-vessel isolation.",
-            "AI DECISION: Recommending 'BOOTLOADER_PROXIMITY' install.",
-            "Reason: Strong CPU detected, but USB 2.0 bottleneck found in source.",
-            "Optimizing: Compressing image before disk transfer to bypass bus bottleneck."
-        ];
-
-        for (const log of logs) {
-            if (!isMountedRef.current) return;
-            setProbeLogs(prev => [...prev, `[AI] ${log}`]);
-            await new Promise(r => setTimeout(r, 600));
+        setProbeLogs(["Hardware probe started... Requesting real system spec via NeuralCore"]);
+        
+        try {
+           const res = await fetch('/api/system/kernel/exec', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: 'uname -a && cat /etc/os-release | grep PRETTY_NAME' })
+           });
+           
+           if (res.ok) {
+              const { output } = await res.json();
+              const lines = output.split('\n').filter(Boolean);
+              for (const log of lines) {
+                  if (!isMountedRef.current) return;
+                  setProbeLogs(prev => [...prev, `[KERNEL] ${log}`]);
+                  await new Promise(r => setTimeout(r, 600));
+              }
+              if (!isMountedRef.current) return;
+              setProbeLogs(prev => [...prev, "[AI] Optimized constraint set dynamically adapted."]);
+           } else {
+              setProbeLogs(prev => [...prev, "Kernel execution failed. Access Denied."]);
+           }
+        } catch(err) {
+           setProbeLogs(prev => [...prev, "System integrity fault. Real execution blocked."]);
         }
+        
         if (!isMountedRef.current) return;
         setProfile('adaptive');
         setBase('arch');

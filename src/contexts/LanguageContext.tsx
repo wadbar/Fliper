@@ -81,7 +81,7 @@ export const translations: Translations = {
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof typeof translations) => string;
+  t: (key: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -89,8 +89,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('en');
 
-  const t = (key: keyof typeof translations) => {
-    return translations[key]?.[language] || key;
+  const t = (key: string): string => {
+    return (translations as any)[key]?.[language] || key;
   };
 
   return (

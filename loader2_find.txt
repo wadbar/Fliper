@@ -1,0 +1,26 @@
+src/components/DownloaderModal.tsx:import { Download, X, Image as ImageIcon, Gamepad2, Settings, Cloud, Loader2, Search, Sparkles, Database, FileArchive, AlertTriangle, Package } from 'lucide-react';
+src/components/DownloaderModal.tsx:                    {connectionStatus === 'connecting' && <span className="text-amber-400 flex items-center gap-1 mx-2"><Loader2 size={12} className="animate-spin"/> Reconectando...</span>}
+src/components/DownloaderModal.tsx:                   {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+src/components/DesktopMode.tsx:import { Gamepad2, Settings, Terminal, Plus, Download, HardDrive, Cpu, Activity, Clock, ShoppingBag, Loader2, Radio, Trophy } from 'lucide-react';
+src/components/apps/CustomizerApp.tsx:import { Settings, Cpu, Package, HardDrive, Play, Shield, Terminal, Loader2, Save, Box, Layers, Smartphone, Radio, Trophy, Activity } from 'lucide-react';
+src/components/apps/CustomizerApp.tsx:                            {aiProbing ? <Loader2 size={10} className="animate-spin" /> : <Shield size={10} />}
+src/components/apps/CustomizerApp.tsx:                    {building ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+src/components/apps/GameManagerApp.tsx:import { Play, Star, Search, Settings, FolderSync, Sparkles, Loader2, Database, Info, Zap, CheckCircle2 } from 'lucide-react';
+src/components/apps/GameManagerApp.tsx:           {isEnriching ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+src/components/apps/GameManagerApp.tsx:              {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 
+src/components/apps/GameManagerApp.tsx:                            {isLaunching ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />} 
+src/components/apps/AiArtGenerator.tsx:import { Sparkles, Image as ImageIcon, RefreshCw, Wand2, Check, X, Loader2 } from 'lucide-react';
+src/components/apps/AiArtGenerator.tsx:            <Loader2 size={24} className="animate-spin text-indigo-400" />
+src/components/apps/AiArtGenerator.tsx:              <Loader2 size={18} className="animate-spin" />
+src/components/apps/AiArtGenerator.tsx:                    <Loader2 size={32} className="animate-spin text-indigo-400" />
+src/components/apps/WikiApp.tsx:import { Book, Cpu, Smartphone, Monitor, Zap, Terminal, Shield, HardDrive, Info, Share2, Download, ExternalLink, Box, Sparkles, Send, Loader2, MessageSquare, Brain } from 'lucide-react';
+src/components/apps/WikiApp.tsx:                                            <Loader2 size={14} className="text-indigo-400 animate-spin" />
+src/components/apps/KernelShellApp.tsx:import { Terminal as TerminalIcon, Cpu, Zap, Activity, ShieldAlert, Sparkles, Loader2 } from 'lucide-react';
+src/components/apps/KernelShellApp.tsx:             <Loader2 size={12} className="animate-spin" />
+src/components/apps/StorageApp.tsx:import { HardDrive, Trash2, RefreshCw, FileText, FileCode, AlertCircle, Loader2, Cloud, CloudUpload, ExternalLink, Layers, Box, Cpu, Download } from 'lucide-react';
+src/components/apps/StorageApp.tsx:               <Loader2 className="animate-spin mb-2" />
+src/components/apps/StorageApp.tsx:                                 {syncing === file.name ? <Loader2 size={12} className="animate-spin" /> : <CloudUpload size={14} />}
+src/components/apps/StorageApp.tsx:                                 {deleting === file.name ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={14} />}
+src/components/ui/TaskMonitor.tsx:import { Download, Loader2, CheckCircle2, AlertCircle, Cpu, Zap, ShieldCheck, RefreshCw, Search } from 'lucide-react';
+src/components/FliperMode.tsx:import { Play, Settings, Menu, Gamepad2, Trophy, Clock, Search, ListFilter, Cpu, Zap, Activity, Loader2 } from 'lucide-react';
+src/components/FliperMode.tsx:        <Loader2 size={64} className="text-white animate-spin mb-6" />

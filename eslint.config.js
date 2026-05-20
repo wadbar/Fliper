@@ -3,10 +3,12 @@ import ts from "typescript-eslint";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import globals from "globals";
+import firebaseRulesPlugin from '@firebase/eslint-plugin-security-rules';
 
 export default [
   js.configs.recommended,
   ...ts.configs.recommended,
+  firebaseRulesPlugin.configs['flat/recommended'],
   {
     languageOptions: {
       globals: {

@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { motion } from 'motion/react';
+import { motion, useDragControls } from 'motion/react';
 import { X, Minus, Square } from 'lucide-react';
 
 interface WindowProps {
@@ -26,10 +26,13 @@ export const OsWindow: React.FC<WindowProps> = ({
   defaultSize = { width: 800, height: 600 },
   zIndex = 10
 }) => {
+  const dragControls = useDragControls();
+
   return (
     <motion.div
       drag
-      dragHandle=".window-titlebar"
+      dragControls={dragControls}
+      dragListener={false}
       dragMomentum={false}
       initial={defaultPosition}
       style={{
@@ -41,8 +44,10 @@ export const OsWindow: React.FC<WindowProps> = ({
       onPointerDown={onFocus}
       className={`flex flex-col bg-[#1A1A1D]/95 backdrop-blur-3xl border shadow-2xl rounded-xl overflow-hidden transition-all duration-200 ${isActive ? 'border-zinc-500/50 shadow-[0_0_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10' : 'border-zinc-800'}`}
     >
-      {/* Titlebar */}
-      <div className="window-titlebar flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-black/60 to-transparent select-none cursor-move border-b border-white/5">
+      <div 
+        onPointerDown={(e) => dragControls.start(e)}
+        className="window-titlebar flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-black/60 to-transparent select-none cursor-move border-b border-white/5"
+      >
         <div className="flex items-center gap-2 text-zinc-300">
           {icon}
           <span className="text-sm font-bold tracking-wide">{title}</span>

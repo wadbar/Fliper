@@ -1,6 +1,11 @@
 import React from 'react';
+import { useSystemSettings } from '../hooks/useSystemSettings';
 
 export const CrtOverlay: React.FC = () => {
+  const { settings } = useSystemSettings();
+  
+  if (!settings.crtEnabled) return null;
+
   return (
     <div className="pointer-events-none absolute inset-0 z-50 overflow-hidden mix-blend-overlay">
       {/* Scanlines */}

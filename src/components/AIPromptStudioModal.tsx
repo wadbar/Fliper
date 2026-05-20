@@ -27,16 +27,28 @@ export const AIPromptStudioModal: React.FC<AIPromptStudioModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (isGenerating) return;
     setIsGenerating(true);
-    // Simulate generation based on the advanced prompt structure
-    if (generationTimeout.current) clearTimeout(generationTimeout.current as number);
-    generationTimeout.current = setTimeout(() => {
-      const base = `A photorealistic video game cover art featuring an epic protagonist in a hyper-detailed ${theme || 'sci-fi and cyberpunk'} setting. The main character is wearing intricate, battle-worn tactical armor with glowing LED accents. Cinematic lighting, dramatic neon blue and orange color grading, volumetric smoke, ray-traced reflections, 8k resolution, Unreal Engine 5 render style, cinematic composition, ultra-detailed textures, depth of field. A clean space reserved for the game title at the top, professional graphic design, masterpiece, 35mm lens, sharp focus. --ar 3:4`;
-      setGeneratedPrompt(base);
+    try {
+      const res = await fetch('/api/ai/refine-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawPrompt: theme || 'sci-fi game cover', category: 'cover_art' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedPrompt(data.refinedPrompt);
+      } else {
+        const base = `A photorealistic video game cover art featuring an epic protagonist in a hyper-detailed ${theme || 'sci-fi and cyberpunk'} setting. The main character is wearing intricate, battle-worn tactical armor with glowing LED accents. Cinematic lighting, dramatic neon blue and orange color grading, volumetric smoke, ray-traced reflections, 8k resolution, Unreal Engine 5 render style, cinematic composition, ultra-detailed textures, depth of field. A clean space reserved for the game title at the top, professional graphic design, masterpiece, 35mm lens, sharp focus. --ar 3:4`;
+        setGeneratedPrompt(base + " (FALLBACK - API ERROR)");
+      }
+    } catch(err) {
+      console.error(err);
+      setGeneratedPrompt("Error connecting to NeuralCore.");
+    } finally {
       setIsGenerating(false);
-    }, 1000);
+    }
   };
 
   const handleCopy = () => {

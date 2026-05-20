@@ -4,7 +4,7 @@ const router = Router();
 
 router.get("/stats", (req, res) => {
     try {
-        // @ts-ignore
+        
         import("../../services/aiEngine.mjs").then(m => {
             res.json(m.getEngineStats());
         });
@@ -16,7 +16,7 @@ router.get("/stats", (req, res) => {
 router.post("/intent", async (req, res) => {
     try {
         const { prompt } = req.body;
-        // @ts-ignore
+        
         const { generate } = await import("../../services/aiEngine.mjs");
         
         const systemInstruction = `You are the FliperOS Neural Kernel, a sophisticated retro gaming assistant.
@@ -72,7 +72,17 @@ router.post("/intent", async (req, res) => {
 router.post("/enrich", async (req, res) => {
     try {
         const { title, platform } = req.body;
-        // @ts-ignore
+        
+        // V9 CACHE LAYER: Check Firestore first
+        const gameId = `${title}_${platform}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const { adminDb } = await import("../lib/firebase-admin");
+        
+        const cachedDoc = await adminDb.collection('games').doc(gameId).get();
+        if (cachedDoc.exists) {
+            console.log(`[AI_CACHE] Hit for ${title} (${platform})`);
+            return res.json(cachedDoc.data());
+        }
+
         const { generate } = await import("../../services/aiEngine.mjs");
         
         const systemInstruction = `You are a Retro Gaming Expert and Emulation Specialist. 
@@ -98,6 +108,16 @@ router.post("/enrich", async (req, res) => {
         });
 
         if (result.success) {
+            // Background Save to Firestore (don't block response)
+            adminDb.collection('games').doc(gameId).set({
+                id: gameId,
+                title,
+                platform,
+                ...result.content,
+                year: result.content.year || null, // Ensure string/int compatibility if needed
+                syncedAt: new Date().toISOString()
+            }).catch(err => console.error("[AI_CACHE] Save Error", err));
+
             res.json(result.content);
         } else {
             res.status(500).json({ error: "ENRICHMENT_FAULT" });
@@ -110,7 +130,7 @@ router.post("/enrich", async (req, res) => {
 router.post("/generate", async (req, res) => {
     try {
         const { prompt, systemInstruction, responseType, temperature } = req.body;
-        // @ts-ignore
+        
         const { generate } = await import("../../services/aiEngine.mjs");
         
         const result = await generate({ 
@@ -133,7 +153,7 @@ router.post("/generate", async (req, res) => {
 router.post("/image", async (req, res) => {
     try {
         const { prompt, width, height } = req.body;
-        // @ts-ignore
+        
         const { generateImage } = await import("../../services/aiEngine.mjs");
         
         const result = await generateImage({ 
@@ -155,7 +175,7 @@ router.post("/image", async (req, res) => {
 router.post("/priority", async (req, res) => {
     try {
         const { provider, priority } = req.body;
-        // @ts-ignore
+        
         const { setPriority } = await import("../../services/aiEngine.mjs");
         
         const success = setPriority(provider, priority);
@@ -171,7 +191,7 @@ router.post("/priority", async (req, res) => {
 
 router.post("/wipe", async (req, res) => {
     try {
-        // @ts-ignore
+        
         const { wipeStats } = await import("../../services/aiEngine.mjs");
         wipeStats();
         res.json({ status: "ok" });
@@ -189,7 +209,7 @@ router.post("/refine-prompt", async (req, res) => {
             return res.status(400).json({ error: "INVALID_PROMPT_INPUT" });
         }
 
-        // @ts-ignore
+        
         const { generate } = await import("../../services/aiEngine.mjs");
         
         const systemInstruction = `You are an expert assistant for prompt refinement. 
@@ -234,7 +254,7 @@ router.get("/telemetry", (req, res) => {
 
     const sendUpdate = async () => {
         try {
-            // @ts-ignore
+            
             const { getEngineStats } = await import("../../services/aiEngine.mjs");
             const stats = getEngineStats();
             res.write(`data: ${JSON.stringify(stats)}\n\n`);
@@ -251,6 +271,41 @@ router.get("/telemetry", (req, res) => {
     req.on('close', () => {
         clearInterval(interval);
     });
+});
+
+// V9: Achievements Generator
+router.post("/achievements/generate", async (req, res) => {
+    try {
+        const { title, platform, gameId } = req.body;
+        const { adminDb } = await import("../lib/firebase-admin");
+
+        // Check global cache first
+        const cacheRef = adminDb.collection('games').doc(gameId).collection('meta').doc('achievements');
+        const cached = await cacheRef.get();
+        if (cached.exists) return res.json(cached.data());
+
+        const { generate } = await import("../../services/aiEngine.mjs");
+        
+        const prompt = `Generate exactly 5 creative, non-spoiler achievements for the retro game "${title}" (${platform}). 
+        Include: id (slug), title, description, and difficulty (easy, medium, hard, legendary).
+        Return purely as a JSON object with a 'list' array.`;
+
+        const result = await generate({
+            prompt,
+            systemInstruction: "You are a game design expert specialized in retro gaming achievements.",
+            responseType: 'json'
+        });
+
+        if (result.success) {
+            const achievements = { list: result.content.list || result.content, generatedAt: new Date().toISOString() };
+            await cacheRef.set(achievements).catch(err => console.error("[AI_ACHIEVEMENTS] Save Error", err));
+            res.json(achievements);
+        } else {
+            res.status(500).json({ error: "GEN_FAIL" });
+        }
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 export { router as AiRouter };

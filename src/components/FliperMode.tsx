@@ -1,48 +1,202 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Game } from '../data/games';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Settings, Menu, Gamepad2, Trophy, Clock, DownloadCloud, Loader2, Sparkles, Cpu, Zap } from 'lucide-react';
-
+import { Play, Settings, Menu, Gamepad2, Trophy, Clock, Search, ListFilter, Cpu, Zap, Activity, Loader2, Sparkles, Info, Heart, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { CrtOverlay } from './CrtOverlay';
+
+import { User } from 'firebase/auth';
+import { aiOrchestrator } from '../services/ai/orchestrator';
 
 interface FliperModeProps {
   games: Game[];
   onGamesUpdate: React.Dispatch<React.SetStateAction<Game[]>>;
   onExit: () => void;
+  favorites: Set<string>;
+  onToggleFavorite: (id: string) => void;
+  user: User | null;
+  onLogin: () => void;
+  stats: Record<string, any>;
+  onRecordLaunch: (game: Game) => void;
 }
 
-export const FliperMode: React.FC<FliperModeProps> = ({ games: gamesProp, onGamesUpdate, onExit }) => {
+// ----------------------------------------------------------------------
+// Audio Engine for UI Sounds (Web Audio API Synthesizer)
+// ----------------------------------------------------------------------
+class UIResourceEngine {
+  private ctx: AudioContext | null = null;
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+  }
+
+  playNav() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.05);
+  }
+
+  playSelect() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  playLaunch() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.5);
+  }
+}
+const audioEngine = new UIResourceEngine();
+
+export const FliperMode: React.FC<FliperModeProps> = ({ 
+  games: gamesProp, 
+  onGamesUpdate, 
+  onExit, 
+  favorites, 
+  onToggleFavorite: toggleFavorite,
+  user,
+  onLogin,
+  stats,
+  onRecordLaunch 
+}) => {
   const { t } = useLanguage();
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isPreloading, setIsPreloading] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
-  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [metrics, setMetrics] = useState({ cpu: 0, ram: 0, mode: 'STABLE' });
 
-  const enrichedGamesRef = React.useRef<Set<string>>(new Set());
+  // Filter games based on selected platform and search query
+  const platforms = useMemo(() => ['All', ...Array.from(new Set(gamesProp.map(g => g.platform)))].sort(), [gamesProp]);
+  
+  const filteredGames = useMemo(() => {
+    let result = selectedPlatform === 'All' ? gamesProp : gamesProp.filter(g => g.platform === selectedPlatform);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(g => 
+        g.title.toLowerCase().includes(q) || 
+        g.platform.toLowerCase().includes(q) || 
+        (g.genre && g.genre.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [gamesProp, selectedPlatform, searchQuery]);
 
-  // AI Enrichment Effect
+  // Initialize constraints
+  const activeGame = filteredGames[selectedIndex] || filteredGames[0];
+  const enrichedGamesRef = useRef<Set<string>>(new Set());
+
+  // ----------------------------------------------------------------------
+  // Audio Initialization
+  // ----------------------------------------------------------------------
   useEffect(() => {
-    const game = gamesProp[selectedIndex];
-    if (!game) return;
+    const initAudio = () => {
+      audioEngine.init();
+      window.removeEventListener('click', initAudio);
+      window.removeEventListener('keydown', initAudio);
+    };
+    window.addEventListener('click', initAudio);
+    window.addEventListener('keydown', initAudio);
+    return () => {
+      window.removeEventListener('click', initAudio);
+      window.removeEventListener('keydown', initAudio);
+    };
+  }, []);
 
-    // Only enrich if description is very short or suggestedCore is missing
-    if ((game.description.length < 50 || !game.suggestedCore) && !enrichedGamesRef.current.has(game.id)) {
-      const enrich = async () => {
-        setIsAiLoading(true);
-        try {
-          enrichedGamesRef.current.add(game.id);
-          const res = await fetch('/api/ai/enrich', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: game.title, platform: game.platform })
-          });
-          if (!res.ok) throw new Error("API Failure");
+  // ----------------------------------------------------------------------
+  // Telemetry Fetching (Real Backend)
+  // ----------------------------------------------------------------------
+  useEffect(() => {
+    let isMounted = true;
+    const ac = new AbortController();
+    const fetchStats = async () => {
+      if (!isMounted) return;
+      try {
+        const res = await fetch('/api/system/metrics', { signal: ac.signal });
+        if (res.ok) {
           const data = await res.json();
-          if (data) {
-            onGamesUpdate(prev => prev.map(g => g.id === game.id ? {
+          if (isMounted) {
+            setMetrics({
+              cpu: data.overallCpuUsage || 0,
+              ram: data.memoryUsage ? Math.round(data.memoryUsage.rss / 1024 / 1024 / 1024 * 10) / 10 : 0,
+              mode: data.overallCpuUsage > 80 ? 'OVERLOAD' : 'STABLE'
+            });
+          }
+        }
+      } catch (err: any) {
+        // Silently ignore ping aborts
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 3000);
+    return () => {
+      isMounted = false;
+      ac.abort();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // ----------------------------------------------------------------------
+  // Smart AI Enrichment (Neural Orchestrator Integration)
+  // ----------------------------------------------------------------------
+  useEffect(() => {
+    let isMounted = true;
+    if (!activeGame) return;
+    
+    const needsEnrichment = !activeGame.description || 
+                           activeGame.description.length < 50 || 
+                           !activeGame.suggestedCore || 
+                           !activeGame.genre || 
+                           activeGame.releaseYear === 0;
+
+    // Only attempt enrichment if missing data and not already attempted in this session
+    if (needsEnrichment && !enrichedGamesRef.current.has(activeGame.id)) {
+      
+      const timer = setTimeout(async () => {
+        try {
+          setIsEnriching(true);
+          enrichedGamesRef.current.add(activeGame.id);
+          
+          const data = await aiOrchestrator.enrichGame(activeGame.title, activeGame.platform);
+          
+          if (data && isMounted) {
+            onGamesUpdate(prev => prev.map(g => g.id === activeGame.id ? {
               ...g,
-              releaseYear: parseInt(data.year) || g.releaseYear,
+              releaseYear: parseInt(data.year || '0') || g.releaseYear,
               developer: data.developer || g.developer,
               genre: data.genre || g.genre,
               description: data.description || g.description,
@@ -50,16 +204,24 @@ export const FliperMode: React.FC<FliperModeProps> = ({ games: gamesProp, onGame
             } : g));
           }
         } catch (err) {
-          console.error("AI Enrichment failed", err);
+          if (isMounted) console.error("Neural Enrichment Fault:", err);
         } finally {
-          setIsAiLoading(false);
+          if (isMounted) setIsEnriching(false);
         }
+      }, 800); // Debounce to prevent 429 spam while scrolling
+      
+      return () => { 
+        isMounted = false; 
+        clearTimeout(timer);
       };
-      enrich();
     }
-  }, [selectedIndex, gamesProp, onGamesUpdate]);
+    
+    return () => { isMounted = false; };
+  }, [selectedIndex, selectedPlatform, gamesProp, onGamesUpdate, activeGame]);
 
-  // Elite Optimization: Memoized preload routine replacing simple side effects
+  // ----------------------------------------------------------------------
+  // Preloading Assets
+  // ----------------------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
     const preloadAssets = async () => {
@@ -88,16 +250,53 @@ export const FliperMode: React.FC<FliperModeProps> = ({ games: gamesProp, onGame
     return () => { isMounted = false; };
   }, [gamesProp]);
 
-  const launchGame = async () => {
+  // ----------------------------------------------------------------------
+  // Gamepad & Keyboard Navigation
+  // ----------------------------------------------------------------------
+  const handleNav = useCallback((dir: 'up' | 'down' | 'left' | 'right') => {
     if (isLaunching) return;
-    const path = gamesProp[selectedIndex].id + '.rom';
-    const platform = gamesProp[selectedIndex].platform;
+    audioEngine.playNav();
+    if (dir === 'left') {
+      setSelectedPlatform(prev => {
+        const idx = platforms.indexOf(prev);
+        const newIdx = (idx - 1 + platforms.length) % platforms.length;
+        setSelectedIndex(0);
+        return platforms[newIdx];
+      });
+    } else if (dir === 'right') {
+      setSelectedPlatform(prev => {
+        const idx = platforms.indexOf(prev);
+        const newIdx = (idx + 1) % platforms.length;
+        setSelectedIndex(0);
+        return platforms[newIdx];
+      });
+    } else if (dir === 'down') {
+      setSelectedIndex(prev => (prev + 1) % filteredGames.length);
+    } else if (dir === 'up') {
+      setSelectedIndex(prev => (prev - 1 + filteredGames.length) % filteredGames.length);
+    }
+  }, [isLaunching, platforms, filteredGames.length]);
+
+  // ----------------------------------------------------------------------
+  // Launch Logic
+  // ----------------------------------------------------------------------
+  const launchGame = useCallback(async () => {
+    if (isLaunching || !activeGame) return;
+    audioEngine.playLaunch();
+    setIsLaunching(true);
+    
+    const path = activeGame.id + '.rom';
+    const platform = activeGame.platform;
     const mode = localStorage.getItem('fliper_perf_mode') || 'ultra';
     
-    // Comprehensive platform-to-core mapping
-    let coreId = gamesProp[selectedIndex].suggestedCore?.toLowerCase() || 'mame';
+    // Core Resolution
+    let coreId = activeGame.suggestedCore?.toLowerCase() || 'mame';
+
+    // V9: Cloud Sync - Record Launch
+    await onRecordLaunch(activeGame);
     
-    if (!gamesProp[selectedIndex].suggestedCore) {
+    // Fallback overrides
+    if (!activeGame.suggestedCore) {
       const p = platform.toLowerCase();
       if (p.includes('playstation 2') || p.includes('ps2')) coreId = localStorage.getItem('fliper_core_ps2') || 'pcsx2';
       else if (p.includes('playstation 3') || p.includes('ps3')) coreId = localStorage.getItem('fliper_core_ps3') || 'rpcs3';
@@ -116,325 +315,425 @@ export const FliperMode: React.FC<FliperModeProps> = ({ games: gamesProp, onGame
       else coreId = localStorage.getItem('fliper_core_arcade') || 'mame';
     }
 
-    setIsLaunching(true);
     console.log(`[Action] Invoking API launcher ${path} ${platform} ${mode.toUpperCase()} Core:${coreId}`);
     
-    fetch('/api/launch', {
+    // Real System Call
+    fetch('/api/system/kernel/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, platform, mode: mode.toUpperCase(), core: coreId })
+        body: JSON.stringify({ command: `retroarch -L ${coreId}_libretro.so /roms/${path}` })
     }).catch(err => console.error("Launcher API error", err));
-  };
+    
+    setTimeout(() => { setIsLaunching(false); }, 4000);
+  }, [activeGame, isLaunching]);
 
   useEffect(() => {
-    if (!isLaunching) return;
-    const timer = setTimeout(() => {
-      setIsLaunching(false);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [isLaunching]);
+    let animationFrameId: number;
+    let lastGamepadState = { up: false, down: false, left: false, right: false, a: false, b: false, y: false };
 
-  useEffect(() => {
+    const pollGamepad = () => {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = gamepads[0];
+      if (gp && !isLaunching) {
+        // D-Pad or Left Stick
+        const up = gp.buttons[12]?.pressed || gp.axes[1] < -0.5;
+        const down = gp.buttons[13]?.pressed || gp.axes[1] > 0.5;
+        const left = gp.buttons[14]?.pressed || gp.axes[0] < -0.5;
+        const right = gp.buttons[15]?.pressed || gp.axes[0] > 0.5;
+        const aBtn = gp.buttons[0]?.pressed;
+        const bBtn = gp.buttons[1]?.pressed;
+        const yBtn = gp.buttons[3]?.pressed;
+
+        if (up && !lastGamepadState.up) handleNav('up');
+        if (down && !lastGamepadState.down) handleNav('down');
+        if (left && !lastGamepadState.left) handleNav('left');
+        if (right && !lastGamepadState.right) handleNav('right');
+        
+        if (aBtn && !lastGamepadState.a) {
+           launchGame();
+        }
+        if (bBtn && !lastGamepadState.b) {
+           audioEngine.playSelect();
+           onExit();
+        }
+        if (yBtn && !lastGamepadState.y && activeGame) {
+           toggleFavorite(activeGame.id);
+        }
+
+        lastGamepadState = { up, down, left, right, a: aBtn, b: bBtn, y: yBtn };
+      }
+      animationFrameId = requestAnimationFrame(pollGamepad);
+    };
+    pollGamepad();
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isLaunching) return;
-      if (e.key === 'ArrowRight') setSelectedIndex((prev) => (prev + 1) % gamesProp.length);
-      else if (e.key === 'ArrowLeft') setSelectedIndex((prev) => (prev - 1 + gamesProp.length) % gamesProp.length);
-      else if (e.key === 'Escape') onExit();
-      else if (e.key === 'Enter') launchGame();
+      
+      // Handle search toggle
+      if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+        return;
+      }
+
+      if (isSearchOpen) {
+        if (e.key === 'Escape') {
+          setIsSearchOpen(false);
+          setSearchQuery('');
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowDown') { e.preventDefault(); handleNav('down'); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); handleNav('up'); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); handleNav('left'); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); handleNav('right'); }
+      else if (e.key === 'f' || e.key === '/') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+      else if (e.key === 'Escape' || e.key === 'Backspace') {
+         audioEngine.playSelect();
+         onExit();
+      }
+      else if (e.key === 'Enter') {
+         launchGame();
+      }
+      else if (e.key === 'h' && activeGame) {
+         toggleFavorite(activeGame.id);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gamesProp.length, onExit, selectedIndex, isLaunching]);
-
-  const selectedGame = gamesProp[selectedIndex];
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [handleNav, isLaunching, onExit, launchGame]);
 
   if (isPreloading) {
     return (
-      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center font-mono">
-        <Loader2 size={48} className="text-indigo-500 animate-spin mb-4" />
-        <span className="text-zinc-500 tracking-widest uppercase text-sm">Loading RAM Cache (64GB)...</span>
+      <div className="fixed inset-0 bg-[#0a0a09] flex flex-col items-center justify-center font-mono">
+        <Loader2 size={64} className="text-white animate-spin mb-6" />
+        <span className="text-zinc-500 tracking-[0.3em] uppercase text-sm font-bold">Initializing BigBox Architecture...</span>
         <CrtOverlay />
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] text-white overflow-hidden select-none font-sans flex flex-col">
+    <div className="fixed inset-0 bg-[#050505] text-white overflow-hidden select-none font-sans flex flex-col">
       <CrtOverlay />
-      {/* Launching Sequence Overlay */}
-      <AnimatePresence>
-        {isLaunching && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center font-mono"
-          >
-            <motion.div
-               animate={{ scale: [1, 1.05, 1], opacity: [0.5, 1, 0.5] }}
-               transition={{ duration: 0.5, repeat: Infinity }}
-               className="text-indigo-500 mb-8"
-            >
-               <Gamepad2 size={64} />
-            </motion.div>
-            <h1 className="text-4xl font-bold tracking-widest text-white mb-2 animate-pulse">{t('booting')}</h1>
-            <p className="text-zinc-500 uppercase tracking-widest text-sm mb-8">{selectedGame.title}</p>
-            <div className="w-64 h-1 bg-zinc-900 rounded-full overflow-hidden">
-               <motion.div 
-                 initial={{ width: 0 }}
-                 animate={{ width: "100%" }}
-                 transition={{ duration: 3.5, ease: "easeInOut" }}
-                 className="h-full bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.8)]"
-               />
-            </div>
-            <p className="text-zinc-600 mt-4 text-xs">Initializing WSL2 Virtual Display...</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Background artwork animado (10ft UI) */}
-      <AnimatePresence mode="popLayout">
+      {/* Dynamic Background */}
+      <AnimatePresence mode="wait">
         <motion.div
-          key={selectedGame.id}
-          initial={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
-          animate={{ opacity: 0.6, scale: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          key={activeGame?.id}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 0.4, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.2 }}
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${selectedGame.fanArt})` }}
+          style={{ backgroundImage: `url(${activeGame?.fanArt || activeGame?.coverArt})` }}
         >
-          <div className="absolute inset-0 bg-[#0a0a0a]/40 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
         </motion.div>
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0a0a0a_100%)] opacity-60 pointer-events-none" />
 
-      {/* Retro Scanline Overlay */}
-      <div className="absolute inset-0 pointer-events-none z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,3px_100%] opacity-20" />
-
-      {/* Top HUD */}
-      <div className="absolute top-0 w-full px-16 py-10 flex justify-between items-center z-20 backdrop-blur-md border-b border-white/5 bg-black/20">
-        <div className="flex items-center gap-6">
-          <motion.div 
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/40 border border-white/30"
-          >
-            <Gamepad2 size={32} className="text-white drop-shadow-lg" />
-          </motion.div>
-          <div className="flex flex-col">
-            <span className="text-3xl font-black tracking-tighter text-white leading-none italic">FLIPER PRO</span>
-            <div className="flex items-center gap-2 mt-1.5">
-               <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em]">Sovereign Kernel OS</span>
-               <div className="px-2 py-0.5 bg-indigo-500/20 rounded-md text-[8px] font-black text-white border border-indigo-500/20">v2.5.5</div>
-            </div>
-          </div>
-        </div>
+      {/* Main Grid Layout */}
+      <div className="relative z-10 w-full h-full flex flex-col">
         
-        <div className="flex gap-4 items-center">
-            <div className="flex gap-8 items-center text-[10px] font-black uppercase tracking-widest bg-white/5 backdrop-blur-2xl px-8 py-4 rounded-2xl border border-white/10 shadow-2xl relative group overflow-hidden">
-               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-               <div className="flex items-center gap-3">
-                 <div className="relative">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                 </div>
-                 <span className="text-zinc-500">System:</span> <span className="text-white">OPTIMAL</span>
-               </div>
-               <div className="w-px h-6 bg-white/10" />
-               <div className="flex items-center gap-3">
-                 <Cpu size={14} className="text-indigo-400" />
-                 <span className="text-zinc-500">Core:</span> <span className="text-white">64-THREAD</span>
-               </div>
-               <div className="w-px h-6 bg-white/10" />
-               <div className="flex items-center gap-3">
-                 <Zap size={14} className="text-amber-400" />
-                 <span className="text-zinc-500">Neural:</span> <span className="text-white">ACTIVE</span>
-               </div>
-            </div>
-            
-            <motion.div 
-               whileHover={{ scale: 1.05 }}
-               className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/20 p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 shadow-xl cursor-pointer"
-            >
-               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=FliperOS" className="w-full h-full rounded-2xl bg-zinc-900" />
-            </motion.div>
-        </div>
-      </div>
-
-      {/* Main Layout - Bento Grid inspirated */}
-      <div className="relative z-10 w-full h-full px-16 pb-16 pt-32 flex flex-col justify-between">
-        
-        <div className="flex gap-12 items-start h-full mt-10">
-          {/* Game Info Panel */}
-          <div className="flex-1 max-w-3xl flex flex-col">
-            <motion.div
-              key={`info-${selectedGame.id}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="inline-flex px-4 py-2 bg-indigo-500/10 backdrop-blur-md border border-indigo-500/20 rounded-lg text-[10px] uppercase tracking-[0.4em] font-black mb-6 text-indigo-400">
-                {selectedGame.platform} // 01. SYSTEMS_CHECK
+        {/* Header HUD */}
+        <header className="px-12 py-8 flex justify-between items-center backdrop-blur-sm border-b border-white/5">
+           <div className="flex items-center gap-6">
+              <Gamepad2 size={42} className="text-indigo-400 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
+              <div>
+                <h1 className="text-4xl font-black italic tracking-tighter leading-none">FLIPER OS <span className="text-indigo-500">PRO</span></h1>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-[0.3em] font-bold mt-1">Sovereign Multicade Environment</p>
               </div>
-              <h1 className="text-7xl md:text-9xl font-black tracking-[calc(-0.05em)] leading-[0.85] mb-6 drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40">
-                {selectedGame.title}
-              </h1>
-
-              <div className="flex items-center gap-6 mb-10">
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Year</span>
-                    <span className="text-2xl font-black text-white">{selectedGame.releaseYear}</span>
-                </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Genre</span>
-                    <span className="text-2xl font-black text-zinc-300">{selectedGame.genre}</span>
-                </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Dev</span>
-                    <span className="text-2xl font-black text-zinc-300">{selectedGame.developer}</span>
-                </div>
-                
-                {isAiLoading && (
-                  <div className="flex items-center gap-3 ml-6 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
-                    <Loader2 size={16} className="text-indigo-400 animate-spin" />
-                    <span className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] animate-pulse">Neural Enrichment In Progress...</span>
-                  </div>
+           </div>
+           
+           <div className="flex items-center gap-4">
+              <AnimatePresence>
+                {isSearchOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, width: 0, x: 20 }}
+                    animate={{ opacity: 1, width: 'auto', x: 0 }}
+                    exit={{ opacity: 0, width: 0, x: 20 }}
+                    className="relative flex items-center"
+                  >
+                    <Search size={16} className="absolute left-4 text-zinc-500" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search title, platform, genre..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setSelectedIndex(0);
+                      }}
+                      className="bg-zinc-900/80 border border-indigo-500/30 rounded-full py-2 pl-12 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-72 text-white placeholder-zinc-500 font-bold tracking-tight backdrop-blur-xl"
+                    />
+                    {searchQuery && (
+                      <button 
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedIndex(0);
+                        }}
+                        className="absolute right-4 text-zinc-500 hover:text-white transition-colors"
+                      >
+                         <Info size={14} className="rotate-45" />
+                      </button>
+                    )}
+                  </motion.div>
                 )}
-              </div>
-              
-              <div className="flex gap-4 mb-10">
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex gap-5 pr-16 hover:bg-white/10 transition-colors">
-                   <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center">
-                     <Clock className="text-zinc-300" size={20} />
-                   </div>
-                   <div>
-                     <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest mb-1">Total Playtime</p>
-                     <p className="font-black text-xl text-white">24h 12m</p>
-                   </div>
-                </div>
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex gap-5 pr-16 hover:bg-white/10 transition-colors">
-                   <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                     <Trophy className="text-amber-500" size={20} />
-                   </div>
-                   <div>
-                     <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest mb-1">Elite Trophies</p>
-                     <p className="font-black text-xl text-white">12 / 48</p>
-                   </div>
-                </div>
-              </div>
+              </AnimatePresence>
 
-              <div className="relative">
-                <div className="absolute -left-6 top-0 bottom-0 w-1 bg-indigo-500/50 rounded-full" />
-                <p className="text-2xl text-zinc-400/90 leading-relaxed max-w-3xl font-medium tracking-tight">
-                    {selectedGame.description}
-                </p>
+              <button 
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className={`p-3 rounded-full transition-all ${isSearchOpen ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:bg-white/10'}`}
+              >
+                <Search size={20} />
+              </button>
+
+              <div className="flex gap-8 items-center bg-white/5 border border-white/10 rounded-full px-8 py-3 backdrop-blur-xl shadow-2xl">
+                <div className="flex items-center gap-3 relative group">
+                   <ListFilter size={16} className="text-zinc-400" />
+                   <select 
+                     value={selectedPlatform}
+                     onChange={(e) => {
+                       setSelectedPlatform(e.target.value);
+                       setSelectedIndex(0);
+                     }}
+                     className="bg-transparent text-xs font-black text-zinc-300 uppercase tracking-widest outline-none appearance-none cursor-pointer pr-4 hover:text-white transition-colors"
+                   >
+                     {platforms.map(p => (
+                       <option key={p} value={p} className="bg-zinc-900 text-white">{p}</option>
+                     ))}
+                   </select>
+                   <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                      <Zap size={8} />
+                   </div>
+                </div>
+                <div className="w-px h-6 bg-white/10" />
+                <div className="flex items-center gap-3">
+                   <Cpu size={16} className="text-emerald-400" />
+                   <span className="text-xs font-bold text-white tracking-widest">{metrics.cpu.toFixed(1)}%</span>
+                </div>
+                <div className="w-px h-6 bg-white/10" />
+                <div className="flex items-center gap-3">
+                   <Activity size={16} className={metrics.mode === 'STABLE' ? 'text-indigo-400' : 'text-rose-400'} />
+                   <span className="text-xs font-bold text-white tracking-widest">{metrics.mode}</span>
+                </div>
               </div>
-            </motion.div>
-          </div>
-          
-          {/* Cover Art Bento */}
-          <div className="w-96 perspective-1000 hidden xl:block">
-            <motion.div
-               key={`cover-${selectedGame.id}`}
-               initial={{ rotateY: -15, opacity: 0, x: 50, z: -100 }}
-               animate={{ rotateY: -5, opacity: 1, x: 0, z: 0 }}
-               transition={{ type: "spring", stiffness: 100, damping: 20 }}
-               className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8),0_0_40px_rgba(99,102,241,0.2)] border border-white/20 relative group"
+           </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 flex px-12 pb-12 gap-12 mt-8 overflow-hidden">
+           
+           {/* Left Sidebar - Curved Wheel */}
+           <div className="w-1/4 flex flex-col gap-2 relative h-full">
+              <div className="flex-1 overflow-visible relative flex flex-col justify-center perspective-1000">
+                 {filteredGames.map((game, idx) => {
+                    const diff = idx - selectedIndex;
+                    // Extended window for smoother wheel curvature
+                    if (diff < -5 || diff > 6) return null;
+                    
+                    const isSelected = diff === 0;
+                    
+                    // V9: Wheel Curvature Calculation
+                    const rotateX = diff * -12; // Angle on the wheel
+                    const translateY = diff * 70; // Vertical spacing
+                    const translateZ = Math.abs(diff) * -40; // Depth for curve effect
+                    const opacity = Math.max(0, 1 - Math.abs(diff) * 0.2);
+
+                    const needsEnrichment = !game.description || game.description.length < 50 || !game.suggestedCore || !game.releaseYear || !game.genre;
+                    
+                    return (
+                      <motion.div
+                        key={game.id}
+                        initial={false}
+                        animate={{
+                          rotateX,
+                          y: translateY,
+                          z: translateZ,
+                          x: isSelected ? 40 : 0,
+                          opacity,
+                          scale: isSelected ? 1.1 : 0.9,
+                        }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                        onClick={() => {
+                          audioEngine.playNav();
+                          setSelectedIndex(idx);
+                        }}
+                        className={`py-3 px-6 rounded-xl cursor-pointer absolute w-full transition-all duration-300 ${
+                          isSelected 
+                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-800 shadow-[0_0_50px_rgba(79,70,229,0.4)] border-y border-white/20' 
+                            : 'hover:bg-white/5 border border-transparent'
+                        }`}
+                        style={{ backfaceVisibility: 'hidden' }}
+                      >
+                         <h2 className={`font-black uppercase tracking-[0.15em] truncate py-1 flex items-center justify-between ${isSelected ? 'text-xl text-white' : 'text-lg text-zinc-500'}`}>
+                           {game.title}
+                           <div className="flex items-center gap-2">
+                             {favorites.has(game.id) && <Heart size={14} className="fill-rose-500 text-rose-500" />}
+                             {isSelected && isEnriching ? (
+                               <div className="flex items-center gap-1.5 ml-2">
+                                 <Loader2 size={12} className="animate-spin text-white" />
+                                 <Sparkles size={10} className="text-indigo-300 animate-pulse" />
+                               </div>
+                             ) : (
+                               <>
+                                 {!needsEnrichment && (
+                                   <CheckCircle2 size={14} className="text-emerald-500 opacity-60" />
+                                 )}
+                               </>
+                             )}
+                           </div>
+                         </h2>
+                      </motion.div>
+                    );
+                 })}
+              </div>
+           </div>
+
+           {/* Right Area - Big Box Cinematic Spread */}
+           <div className="flex-1 flex flex-col justify-center items-end pr-8">
+              <AnimatePresence mode="wait">
+                 <motion.div
+                    key={activeGame?.id}
+                    initial={{ opacity: 0, x: 50, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, x: -50, filter: 'blur(10px)' }}
+                    transition={{ duration: 0.5, ease: "circOut" }}
+                    className="flex flex-col items-end text-right max-w-3xl"
+                 >
+                    {/* Platform Logo-style Badge */}
+                    <div className="flex items-center gap-3 mb-4">
+                       <div className="w-1.5 h-10 bg-indigo-500" />
+                       <div className="flex flex-col items-start text-left">
+                          <span className="text-[10px] font-black tracking-[0.5em] text-zinc-500 uppercase">Platform Architecture</span>
+                          <span className="text-xl font-bold text-white uppercase tracking-tighter italic">{activeGame?.platform}</span>
+                       </div>
+                    </div>
+
+                    <h2 className="text-8xl font-black italic tracking-tighter leading-none mb-8 drop-shadow-2xl text-white uppercase">
+                       {activeGame?.title}
+                    </h2>
+
+                    {/* Metadata Grid Inspired by Big Box Cinematic Themes */}
+                    <div className="grid grid-cols-4 gap-12 mb-12 bg-black/60 backdrop-blur-3xl px-12 py-6 rounded-3xl border border-white/5 shadow-2xl skew-x-[-10deg]">
+                       <div className="flex flex-col items-center skew-x-[10deg]">
+                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Established</span>
+                          <span className="font-mono text-2xl font-black text-white">{activeGame?.releaseYear}</span>
+                       </div>
+                       <div className="flex flex-col items-center skew-x-[10deg]">
+                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Genre</span>
+                          <span className="font-mono text-lg font-black text-indigo-400 truncate max-w-[100px] text-center">{activeGame?.genre}</span>
+                       </div>
+                       <div className="flex flex-col items-center skew-x-[10deg]">
+                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black mb-1">Developer</span>
+                          <span className="font-mono text-lg font-black text-zinc-300 truncate max-w-[120px] text-center">{activeGame?.developer}</span>
+                       </div>
+                       <div className="flex flex-col items-center skew-x-[10deg]">
+                          <span className="text-[9px] text-emerald-500 uppercase tracking-widest font-black mb-1">CPU Core</span>
+                          <span className="font-mono text-lg font-black text-emerald-400">{activeGame?.suggestedCore || 'MAME'}</span>
+                       </div>
+                    </div>
+
+                    <div className="flex flex-col items-end">
+                       <p className="text-zinc-400 text-xl leading-snug italic max-w-xl font-medium mb-12 drop-shadow-lg">
+                          {activeGame?.description || "Initializing system description matrix..."}
+                       </p>
+
+                       {/* Large Box Art Hovering Perspective */}
+                       <div className="relative group">
+                          <motion.div
+                            animate={{ 
+                              rotateY: [-5, 5],
+                              rotateX: [2, -2],
+                            }}
+                            transition={{ duration: 4, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                            className="w-80 aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/20 transform-gpu"
+                          >
+                             <img src={activeGame?.coverArt} className="w-full h-full object-cover" />
+                             {/* Scanline overlay on the box art for retro feel */}
+                             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none" />
+                          </motion.div>
+                       </div>
+                    </div>
+                 </motion.div>
+              </AnimatePresence>
+           </div>
+           
+        </div>
+
+        {/* Action Bar Guidance */}
+        <div className="bg-[#090909] border-t border-white/5 py-3 px-12 flex justify-between items-center fixed bottom-0 left-0 right-0 z-50">
+           <div className="flex gap-8">
+               <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs text-white border border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]">F</div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Search</span>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-black border border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]">A</div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Launch</span>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-rose-600 flex items-center justify-center font-bold text-xs text-black border border-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.3)]">B</div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Back / Exit</span>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center font-bold text-xs text-black border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)]">H</div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Favorite</span>
+               </div>
+           </div>
+           <div className="flex items-center gap-3">
+               <div className="flex gap-1 border border-white/20 rounded-md p-1 bg-white/5">
+                 <div className="w-4 h-4 bg-zinc-300 rounded-sm flex items-center justify-center text-[8px] font-black pointer-events-none text-black">◀</div>
+                 <div className="w-4 h-4 bg-zinc-300 rounded-sm flex items-center justify-center text-[8px] font-black pointer-events-none text-black">▶</div>
+               </div>
+               <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Change Platform</span>
+           </div>
+        </div>
+
+        {/* Launching Sequence Overlay */}
+        <AnimatePresence>
+          {isLaunching && activeGame && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono"
             >
-               {/* Internal Bevel */}
-               <div className="absolute inset-0 border border-white/10 rounded-2xl pointer-events-none z-20" />
-               <div className="absolute inset-[1px] border border-black/40 rounded-2xl pointer-events-none z-20" />
-               
-               <img src={selectedGame.coverArt} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[2000ms]" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80'; }} />
-               
-               {/* Surface Glare */}
-               <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-transparent to-white/20 z-10" />
-               
-               {/* Moving Shine Animation */}
-               <motion.div 
-                 animate={{ x: ['-100%', '200%'] }}
-                 transition={{ duration: 4, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 z-20 pointer-events-none"
-               />
+              <div className="absolute inset-0 bg-cover bg-center opacity-20 filter blur-xl" style={{ backgroundImage: `url(${activeGame.fanArt})` }} />
+              <motion.div
+                 animate={{ scale: [1, 1.1, 1] }}
+                 transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
+                 className="relative z-10 p-6 rounded-full bg-indigo-600/20 border border-indigo-400/50 mb-12 shadow-[0_0_80px_rgba(99,102,241,0.5)]"
+              >
+                 <Gamepad2 size={80} className="text-indigo-400" />
+              </motion.div>
+              <h1 className="text-4xl font-black tracking-widest text-white mb-4 animate-pulse relative z-10 uppercase text-center max-w-4xl">
+                 BOOTING: {activeGame.title}
+              </h1>
+              <p className="text-emerald-400 font-mono text-sm uppercase tracking-widest relative z-10 mb-12 bg-black/50 px-4 py-1 rounded">
+                 Target Core: {activeGame.suggestedCore || 'AUTO RESOLVE'}
+              </p>
+              
+              <div className="w-96 h-1 bg-zinc-900 rounded-full overflow-hidden relative z-10">
+                 <motion.div 
+                   initial={{ x: "-100%" }}
+                   animate={{ x: "100%" }}
+                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                   className="h-full w-1/3 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.8)]"
+                 />
+              </div>
+              <p className="text-zinc-500 mt-6 text-xs uppercase tracking-[0.2em] relative z-10">Initializing Execution Pipeline...</p>
             </motion.div>
-          </div>
-        </div>
-
-        {/* Action Bar (Steam Deck Inspired) */}
-        <div className="flex items-end justify-between mt-auto">
-          {/* Cover Flow Carousel */}
-          <div className="flex items-end gap-4 overflow-visible ml-4">
-            {gamesProp.map((game, idx) => {
-              const checkSelected = idx === selectedIndex;
-              const diff = idx - selectedIndex;
-              if (diff < -2 || diff > 6) return null;
-
-              return (
-                <motion.div
-                  key={game.id}
-                  layout
-                  onClick={() => setSelectedIndex(idx)}
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ 
-                    opacity: checkSelected ? 1 : 0.5, 
-                    scale: checkSelected ? 1 : 0.8,
-                    y: checkSelected ? 0 : 25,
-                    rotateY: checkSelected ? 0 : (idx < selectedIndex ? 15 : -15),
-                    z: checkSelected ? 0 : -50
-                  }}
-                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                  className={`relative rounded-xl overflow-hidden shadow-2xl shrink-0 cursor-pointer origin-bottom group perspective-500 ${
-                    checkSelected 
-                      ? 'w-56 ring-4 ring-indigo-500/50 border border-white/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)]' 
-                      : 'w-40 border border-white/5 hover:border-white/20'
-                  }`}
-                >
-                  <div className="aspect-[2/3] relative">
-                    <img src={game.coverArt} loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80'; }} />
-                    
-                    {/* Glossy Overlay for Carousel */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/20 z-10" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    
-                    {!checkSelected && (
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] group-hover:bg-black/20 transition-all" />
-                    )}
-                    
-                    {/* Active Scanline Effect for Selected */}
-                    {checkSelected && (
-                      <motion.div 
-                        animate={{ y: ['0%', '100%'] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-x-0 h-1 bg-white/20 z-20 pointer-events-none blur-sm"
-                      />
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* D-Pad Hint Menu */}
-          <div className="bg-[#121212] border border-white/10 rounded-full px-8 py-4 flex gap-8 shadow-2xl backdrop-blur-2xl">
-            <button onClick={launchGame} className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-black border-2 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]">A</div>
-              <span className="font-semibold text-sm">{t('app_play')}</span>
-            </button>
-            <div className="w-px h-6 bg-white/10" />
-            <button className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-blue-600 border-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.4)] flex items-center justify-center font-bold text-white">X</div>
-              <span className="font-semibold text-sm text-zinc-200">{t('options')} / Cocktail (R)</span>
-            </button>
-            <div className="w-px h-6 bg-white/10" />
-            <button onClick={onExit} className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-red-600 border-2 border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.4)] flex items-center justify-center font-bold text-white">B</div>
-              <span className="font-semibold text-sm text-zinc-200">{t('desktop')}</span>
-            </button>
-          </div>
-        </div>
-
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

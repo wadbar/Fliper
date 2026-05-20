@@ -151,7 +151,7 @@ export const NeuralCoreApp: React.FC = () => {
             if (data.totalCalls > (prevStats?.totalCalls || 0)) {
                 const providers = ['ollama', 'gemini', 'nvidia'];
                 const used = providers.find(p => 
-                    // @ts-ignore
+                    
                     data.successByProvider[p] > (prevStats?.successByProvider?.[p] || 0)
                 );
                 
@@ -297,6 +297,7 @@ export const NeuralCoreApp: React.FC = () => {
             if (manualRefreshTimeoutRef.current) clearTimeout(manualRefreshTimeoutRef.current as number);
             if (abortControllerRef.current) abortControllerRef.current.abort();
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only once on mount
 
     const COLORS = ['#10b981', '#6366f1', '#a855f7', '#71717a'];

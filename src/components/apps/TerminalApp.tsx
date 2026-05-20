@@ -19,8 +19,9 @@ export const TerminalApp: React.FC = () => {
   }, [output]);
 
   useEffect(() => {
+    const sources = activeEventSources.current;
     return () => {
-      activeEventSources.current.forEach(es => es.close());
+      sources.forEach(es => es.close());
     };
   }, []);
 

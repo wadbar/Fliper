@@ -22,7 +22,11 @@ import { NeuralCoreApp } from './apps/NeuralCoreApp';
 
 // Advanced UI Component
 import { CrtOverlay } from './CrtOverlay';
-import { Shield, Book, Brain } from 'lucide-react';
+import { Shield, Book, Brain, LogIn, LogOut, User as UserIcon, History } from 'lucide-react';
+import { User } from 'firebase/auth';
+import { ControlCenter } from './ui/ControlCenter';
+import { LayoutGrid, Globe } from 'lucide-react';
+import { NetplayApp } from './apps/NetplayApp';
 
 // Strategy Pattern: Externalized custom hook for Window Management
 function useWindowManager() {
@@ -74,7 +78,7 @@ function useHardwareStats() {
 
   useEffect(() => {
     let isMounted = true;
-    let abortController = new AbortController();
+    const abortController = new AbortController();
     const fetchStats = async () => {
        if (!isMounted) return;
        try {
@@ -107,14 +111,37 @@ interface DesktopModeProps {
   games: Game[];
   onGamesUpdate: React.Dispatch<React.SetStateAction<Game[]>>;
   onSwitchMode: () => void;
+  favorites: Set<string>;
+  toggleFavorite: (id: string) => void;
+  user: User | null;
+  onLogin: () => void;
+  onLogout: () => void;
+  stats: Record<string, any>;
+  onRecordLaunch: (game: Game) => void;
+  settings: any;
+  updateSetting: (key: string, value: any) => void;
 }
 
-export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, onSwitchMode }) => {
+export const DesktopMode: React.FC<DesktopModeProps> = ({ 
+  games, 
+  onGamesUpdate, 
+  onSwitchMode, 
+  favorites, 
+  toggleFavorite,
+  user,
+  onLogin,
+  onLogout,
+  stats,
+  onRecordLaunch,
+  settings,
+  updateSetting
+}) => {
   const { t } = useLanguage();
   const { dispatch, lastCommand } = useKernel();
   const { openWindows, activeWindow, bringToFront, toggleWindow, closeWindow, getZIndex } = useWindowManager();
   const hardwareStats = useHardwareStats();
   const [activeTasks, setActiveTasks] = useState(0);
+  const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
 
   // Kernel Command Listener
   useEffect(() => {
@@ -156,6 +183,40 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=2560&q=80')] bg-cover bg-center opacity-20" />
       <div className="absolute inset-0 bg-gradient-to-tr from-black/90 via-black/40 to-transparent pointer-events-none" />
       
+      {/* Quick Access Tiles - Jump Back In */}
+      <div className="absolute bottom-20 left-12 right-12 z-0 hidden lg:block">
+         <div className="flex items-center gap-3 mb-4">
+            <History size={18} className="text-emerald-500" />
+            <h3 className="text-sm font-black text-white italic tracking-tighter uppercase">Jump Back In</h3>
+         </div>
+         <div className="flex gap-6">
+            {Object.entries(stats)
+              .filter(([_, s]: any) => s.lastPlayed)
+              .sort((a: any, b: any) => b[1].lastPlayed.seconds - a[1].lastPlayed.seconds)
+              .slice(0, 3)
+              .map(([id, s]: any) => {
+                const game = games.find(g => g.id === id);
+                if (!game) return null;
+                return (
+                  <motion.button
+                    key={id}
+                    whileHover={{ y: -5, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onRecordLaunch(game)}
+                    className="group relative w-64 h-36 rounded-2xl overflow-hidden border border-white/5 shadow-2xl transition-all hover:border-indigo-500/50"
+                  >
+                    <img src={game.fanArt} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                    <div className="absolute bottom-4 left-4 text-left">
+                       <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">{game.platform}</p>
+                       <h4 className="text-sm font-black text-white uppercase tracking-tight leading-none truncate w-56">{game.title}</h4>
+                    </div>
+                  </motion.button>
+                );
+              })}
+         </div>
+      </div>
+
       {/* Desktop Icons */}
       <div className="absolute inset-0 p-6 flex flex-col gap-6 items-start z-0">
         <button onDoubleClick={() => toggleWindow('gameManager')} className="flex flex-col items-center gap-1 group w-24">
@@ -214,6 +275,13 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
           <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-red-500">Stream [OBS]</span>
         </button>
 
+        <button onDoubleClick={() => toggleWindow('netplay')} className="flex flex-col items-center gap-1 group w-24">
+          <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/40 text-sky-400 flex items-center justify-center backdrop-blur shadow-lg shadow-sky-500/10 group-hover:bg-sky-500/30 group-hover:scale-105 transition-all">
+            <Globe size={28} />
+          </div>
+          <span className="text-white text-xs font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pb-1 border-b-2 border-transparent group-hover:border-sky-400">Netplay Hub</span>
+        </button>
+
         <button onDoubleClick={() => toggleWindow('leaderboards')} className="flex flex-col items-center gap-1 group w-24">
           <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/40 text-yellow-500 flex items-center justify-center backdrop-blur shadow-lg shadow-yellow-500/10 group-hover:bg-yellow-500/30 group-hover:scale-105 transition-all">
             <Trophy size={28} />
@@ -258,7 +326,15 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
             defaultPosition={{ x: 80, y: 40 }}
             zIndex={getZIndex('gameManager')}
           >
-            <GameManagerApp gamesProp={games} onGamesUpdate={onGamesUpdate} onSwitchMode={onSwitchMode} />
+            <GameManagerApp 
+              gamesProp={games} 
+              onGamesUpdate={onGamesUpdate} 
+              onSwitchMode={onSwitchMode} 
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+              stats={stats}
+              onRecordLaunch={onRecordLaunch}
+            />
           </OsWindow>
         )}
         {openWindows.includes('store') && (
@@ -405,6 +481,22 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
             <LeaderboardsApp />
           </OsWindow>
         )}
+        {openWindows.includes('netplay') && (
+          <OsWindow
+            key="netplay"
+            id="netplay"
+            title="Neural Netplay"
+            icon={<Globe size={16} className="text-indigo-400" />}
+            isActive={activeWindow === 'netplay'}
+            onFocus={() => bringToFront('netplay')}
+            onClose={() => closeWindow('netplay')}
+            defaultSize={{ width: 850, height: 600 }}
+            defaultPosition={{ x: 210, y: 90 }}
+            zIndex={getZIndex('netplay')}
+          >
+            <NetplayApp />
+          </OsWindow>
+        )}
         {openWindows.includes('wiki') && (
           <OsWindow
             key="wiki"
@@ -438,6 +530,16 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
           </OsWindow>
         )}
       </AnimatePresence>
+      
+      <ControlCenter 
+        isOpen={isControlCenterOpen}
+        onClose={() => setIsControlCenterOpen(false)}
+        volume={settings.volume}
+        onVolumeChange={(val) => updateSetting('volume', val)}
+        brightness={settings.brightness}
+        onBrightnessChange={(val) => updateSetting('brightness', val)}
+      />
+
       <div className="absolute bottom-0 w-full h-12 bg-black/80 backdrop-blur-3xl border-t border-white/10 flex items-center px-4 z-50">
         <button onClick={onSwitchMode} className="flex items-center gap-2 px-4 h-9 bg-indigo-600 hover:bg-indigo-500 rounded-md text-sm font-bold text-white shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all">
           <Gamepad2 size={16} /> Enter Fliper Mode
@@ -474,7 +576,41 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({ games, onGamesUpdate, 
           ))}
         </div>
 
+        {/* System User Tray */}
+        <div className="flex items-center gap-2 mr-4">
+          {user ? (
+            <div className="flex items-center gap-2 px-3 h-9 bg-zinc-800/80 hover:bg-zinc-700/80 border border-white/5 rounded-md transition-all group overflow-hidden max-w-[150px]">
+               {user.photoURL ? (
+                 <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
+               ) : (
+                 <UserIcon size={14} className="text-indigo-400" />
+               )}
+               <span className="text-[11px] font-bold truncate max-w-[80px]">{user.displayName || user.email}</span>
+               <button onClick={onLogout} className="p-1 hover:text-rose-400 transition-colors">
+                 <LogOut size={12} />
+               </button>
+            </div>
+          ) : (
+            <button 
+              onClick={onLogin}
+              className="flex items-center gap-2 px-4 h-9 bg-zinc-800/80 hover:bg-zinc-700/80 border border-indigo-500/30 rounded-md text-[11px] font-bold text-white transition-all shadow-[0_0_10px_rgba(99,102,241,0.1)] active:scale-95"
+            >
+              <LogIn size={14} className="text-indigo-400" />
+              <span>LOG IN</span>
+            </button>
+          )}
+        </div>
+
         {/* System Tray & Telemetry */}
+        <div className="flex items-center gap-2 mr-4">
+           <button 
+             onClick={() => setIsControlCenterOpen(!isControlCenterOpen)}
+             className={`p-2 rounded-lg transition-all ${isControlCenterOpen ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-zinc-400'}`}
+           >
+              <LayoutGrid size={18} />
+           </button>
+        </div>
+
         <div className="flex items-center gap-4 text-xs font-mono text-zinc-400 bg-black/40 px-4 py-1.5 rounded-full border border-white/5 shadow-inner">
           {activeTasks > 0 && (
              <div className="flex items-center gap-1.5 text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">

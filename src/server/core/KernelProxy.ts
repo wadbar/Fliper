@@ -36,7 +36,7 @@ export class KernelProxy {
     // 2. Advanced Whitelist Check (Allows exact match or prefix if it's a tool like chdman)
     const isWhitelisted = this.WHITELIST.some(w => {
         // Safe prefix matching for builder tools
-        if (["chdman createcd", "aws s3", "rclone sync", "mkarchiso", "debootstrap", "genisoimage", "lspci"].some(tool => trimmed.startsWith(tool))) return true;
+        if (["retroarch", "ls -la", "chdman createcd", "aws s3", "rclone sync", "mkarchiso", "debootstrap", "genisoimage", "lspci"].some(tool => trimmed.startsWith(tool))) return true;
         return trimmed === w;
     });
 
