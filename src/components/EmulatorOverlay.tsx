@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Play, Loader2, Maximize2, Settings, Zap, Terminal, Cpu } from 'lucide-react';
+import { X, Play, Loader2, Maximize2, Settings, Zap, Terminal, Cpu, RotateCcw, Cloud } from 'lucide-react';
 import { Game } from '../data/games';
 import { audioEngine } from '../services/audioEngine';
 import { CrtOverlay } from './CrtOverlay';
+import { SaveStatePanel } from './os/SaveStatePanel';
+import { EmulatorManager } from './os/EmulatorManager';
 
 interface EmulatorOverlayProps {
   game: Game | null;
@@ -14,6 +16,8 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
   const [bootStage, setBootStage] = useState<'init' | 'loading' | 'active'>('init');
   const [bootLogs, setBootLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
+  const [isStatesOpen, setIsStatesOpen] = useState(false);
+  const [activeSideTab, setActiveSideTab] = useState<'states' | 'emulators'>('states');
 
   useEffect(() => {
     if (game) {
@@ -39,18 +43,85 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
     }
   }, [game]);
 
+  const [isSyncActive, setIsSyncActive] = useState(true);
+
+  useEffect(() => {
+    const fetchSync = async () => {
+      try {
+        const res = await fetch('/api/system/config/sync');
+        const data = await res.json();
+        setIsSyncActive(!!data.enabled);
+      } catch (e) { /* silent */ }
+    };
+    fetchSync();
+    const interval = setInterval(fetchSync, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleCapture = useCallback(async (previewUrl?: string) => {
+    if (!game) return;
+    try {
+      await fetch('/api/system/files/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: game.id, type: 'state', previewUrl })
+      });
+      audioEngine.play('click');
+    } catch (e) { console.error("Save Error", e); }
+  }, [game]);
+
+  const handleRestore = useCallback(async (stateId: string) => {
+    if (!game) return;
+    try {
+      await fetch('/api/system/files/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: game.id, stateId })
+      });
+      setIsStatesOpen(false);
+      audioEngine.play('launch');
+    } catch (e) { console.error("Restore Error", e); }
+  }, [game]);
+
+  const handleDelete = useCallback(async (stateId: string) => {
+    try {
+      await fetch(`/api/system/files?path=states/${game?.id}/${stateId}`, {
+        method: 'DELETE'
+      });
+    } catch (e) { console.error("Delete Error", e); }
+  }, [game]);
+
   useEffect(() => {
     if (!game) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (isStatesOpen) setIsStatesOpen(false);
+        else onClose();
       }
+      if (e.key === 'F2') handleCapture();
+      if (e.key === 'F4') handleRestore('quick');
+      if (e.key === 'F5') setIsStatesOpen(prev => !prev);
     };
 
+    const pollGamepad = () => {
+       const gamepads = navigator.getGamepads();
+       for (const gp of gamepads) {
+          if (!gp) continue;
+          // L3: 10, R3: 11
+          if (gp.buttons[10].pressed) handleCapture();
+          if (gp.buttons[11].pressed) handleRestore('quick');
+       }
+    };
+
+    const gamepadInterval = setInterval(pollGamepad, 100);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [game, onClose]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearInterval(gamepadInterval);
+    };
+  }, [game, onClose, isStatesOpen, handleCapture, handleRestore]);
 
   if (!game) return null;
 
@@ -76,6 +147,15 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
          </div>
 
          <div className="flex items-center gap-4">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.8 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="flex items-center gap-2 px-3 py-1 bg-zinc-900/50 rounded-full border border-white/5 text-[10px] font-mono"
+            >
+               <Cloud size={10} className={isSyncActive ? "text-indigo-400" : "text-zinc-600"} />
+               <span className="text-zinc-500 uppercase tracking-tighter">Sync:</span>
+               <span className={isSyncActive ? "text-indigo-400" : "text-zinc-600"}>{isSyncActive ? 'Active' : 'Offline'}</span>
+            </motion.div>
             <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900/50 rounded-full border border-white/5 text-[10px] font-mono text-emerald-400">
                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                60.0 FPS
@@ -87,7 +167,7 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
       </div>
 
       {/* Main Screen Area */}
-      <div className="flex-1 relative flex items-center justify-center bg-[#050505]">
+      <div className="flex-1 relative flex items-center justify-center bg-[#050505] overflow-hidden">
          <AnimatePresence mode="wait">
             {bootStage !== 'active' ? (
                <motion.div 
@@ -123,45 +203,96 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
                   </div>
                </motion.div>
             ) : (
-               <motion.div 
-                 key="active"
-                 initial={{ opacity: 0, scale: 0.9 }}
-                 animate={{ opacity: 1, scale: 1 }}
-                 className="relative w-full h-full max-w-6xl aspect-[4/3] bg-zinc-900 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center group"
-               >
-                  {/* Emulator Content Mockup - In a real app this would be a Canvas or Iframe for WASM */}
-                  <img src={game.coverArt} alt={game.title} className="w-full h-full object-cover blur-2xl opacity-20" />
-                  
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
-                     <div className="w-24 h-24 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center">
-                        <Zap size={48} className="text-indigo-400 animate-pulse" />
-                     </div>
-                     <div className="text-center">
-                        <h2 className="text-3xl font-black text-white uppercase tracking-[0.2em] mb-2">{game.title}</h2>
-                        <p className="text-zinc-500 font-mono text-sm tracking-widest uppercase">Engine Live - Controller Connected</p>
-                     </div>
-                  </div>
+               <div className="flex w-full h-full items-center justify-center p-12 gap-8 relative">
+                <motion.div 
+                  key="active"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className={`relative h-full transition-all duration-500 overflow-hidden flex items-center justify-center group bg-zinc-900 shadow-[0_0_100px_rgba(0,0,0,0.8)] rounded-2xl ${isStatesOpen ? 'w-2/3' : 'w-full max-w-6xl aspect-[4/3]'}`}
+                >
+                    {/* Emulator Content Mockup */}
+                    <img src={game.coverArt} alt="emulator-viewport" className="w-full h-full object-cover blur-2xl opacity-20" />
+                    
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                       <div className="w-16 h-16 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center">
+                          <Zap size={32} className="text-indigo-400 animate-pulse" />
+                       </div>
+                       <div className="text-center px-6">
+                          <h2 className="text-xl md:text-3xl font-black text-white uppercase tracking-[0.2em] mb-2">{game.title}</h2>
+                          <p className="text-zinc-500 font-mono text-[10px] md:text-xs tracking-widest uppercase">Engine Live - Controller Connected</p>
+                       </div>
+                    </div>
 
-                  {/* UI Controls Overlay for Real App Experience */}
-                  <div className="absolute bottom-10 left-10 flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
-                     <button className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-xs font-bold hover:bg-black/90 transition-all">
-                        <Settings size={14} /> CORE OPTIONS
-                     </button>
-                     <button className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-xs font-bold hover:bg-black/90 transition-all">
-                        <Play size={14} /> SAVE STATE
-                     </button>
-                  </div>
-               </motion.div>
+                    {/* UI Controls Overlay */}
+                    <div className="absolute bottom-10 left-10 flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
+                       <button className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-bold hover:bg-black/90 transition-all uppercase tracking-widest">
+                          <Settings size={14} /> Options
+                       </button>
+                       <button 
+                         onClick={() => setIsStatesOpen(!isStatesOpen)}
+                         className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[10px] font-bold transition-all uppercase tracking-widest ${isStatesOpen ? 'bg-m3-primary text-m3-on-primary border-transparent' : 'bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/90'}`}
+                       >
+                          <RotateCcw size={14} /> Snapshots
+                       </button>
+                    </div>
+                </motion.div>
+
+                <AnimatePresence>
+                   {isStatesOpen && (
+                     <motion.div 
+                        initial={{ opacity: 0, x: 100 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 100 }}
+                        className="w-1/3 h-full max-w-md flex flex-col gap-4"
+                     >
+                        <div className="flex bg-zinc-900/50 rounded-2xl p-1 border border-white/5">
+                           <button 
+                             onClick={() => setActiveSideTab('states')}
+                             className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSideTab === 'states' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                           >
+                            Snapshots
+                           </button>
+                           <button 
+                             onClick={() => setActiveSideTab('emulators')}
+                             className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSideTab === 'emulators' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                           >
+                            Engines
+                           </button>
+                        </div>
+                        {activeSideTab === 'states' ? (
+                          <SaveStatePanel 
+                            gameId={game.id}
+                            onCapture={handleCapture}
+                            onRestore={handleRestore}
+                            onDelete={handleDelete}
+                          />
+                        ) : (
+                          <EmulatorManager />
+                        )}
+                     </motion.div>
+                   )}
+                </AnimatePresence>
+               </div>
             )}
          </AnimatePresence>
       </div>
 
       {/* Controller Mapping Info Bar */}
-      <div className="h-10 bg-black border-t border-white/5 flex items-center justify-center gap-8 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
-         <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[8px]">A</span> Confirm</div>
-         <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[8px]">B</span> Back</div>
-         <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[8px]">S</span> Settings</div>
+      <div className="h-10 bg-black border-t border-white/5 flex items-center justify-center gap-8 text-[10px] font-bold text-zinc-600 uppercase tracking-widest z-50">
+         <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[7px]">F2 / L3</span> Save
+         </div>
+         <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[7px]">F4 / R3</span> Quick Restore
+         </div>
+         <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[7px]">F5</span> Snapshots
+         </div>
+         <div className="hidden md:flex items-center gap-2">
+            <span className="px-2 py-1 bg-zinc-800 text-white rounded text-[7px] leading-none">ESC</span> Exit
+         </div>
       </div>
     </motion.div>
   );
 };
+

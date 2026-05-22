@@ -30,10 +30,95 @@ export class AdvancedQueueManager {
   private readonly TTL_MS = 60000;
   private sseClients: Set<express.Response> = new Set();
   private gcInterval: NodeJS.Timeout;
+  private watchInterval: NodeJS.Timeout | null = null;
+  private syncEnabled = true;
 
   constructor() {
     this.gcInterval = setInterval(() => this.garbageCollect(), 10000);
-    this.gcInterval.unref(); // Prevent blocking Node cycle
+    this.gcInterval.unref(); 
+    this.startStateWatcher();
+  }
+
+  public setSyncEnabled(enabled: boolean) {
+    this.syncEnabled = enabled;
+    logger.info(`QueueManager: Automatic state sync ${enabled ? 'ENABLED' : 'DISABLED'}`);
+  }
+
+  public getSyncEnabled() {
+    return this.syncEnabled;
+  }
+
+  private startStateWatcher() {
+    const statesPath = path.join(process.cwd(), 'database', 'states');
+    if (!fs.existsSync(statesPath)) {
+      fs.mkdirSync(statesPath, { recursive: true });
+    }
+
+    // Industrial Watcher: Poll every 30s for new states not yet synced
+    this.watchInterval = setInterval(async () => {
+      if (!this.syncEnabled) return;
+      
+      try {
+        const games = await fs.promises.readdir(statesPath);
+        for (const gameId of games) {
+          const gameStatesPath = path.join(statesPath, gameId);
+          const stat = await fs.promises.stat(gameStatesPath);
+          if (stat.isDirectory()) {
+            const files = await fs.promises.readdir(gameStatesPath);
+            for (const file of files) {
+              if (file.endsWith('.state')) {
+                // If not in cloud (simulated by checking memory or just triggering task)
+                // Real implementation would check a local DB for sync status
+                // Here we just ensure we don't spam duplicate tasks for active tasks
+                const taskName = `sync_${gameId}_${file}`;
+                const exists = Array.from(this.queue.values()).some(t => t.name === taskName && t.status !== 'error');
+                if (!exists) {
+                   this.addTask('cloud_sync', taskName, { 
+                     fileName: file, 
+                     localDataPath: `states/${gameId}/${file}` 
+                   });
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        logger.error("State Watcher Fault", e);
+      }
+    }, 30000);
+    this.watchInterval.unref();
+    this.startRomWatcher();
+  }
+
+  private startRomWatcher() {
+    const romsPath = path.join(process.cwd(), 'database', 'roms');
+    if (!fs.existsSync(romsPath)) {
+      fs.mkdirSync(romsPath, { recursive: true });
+    }
+
+    // Industrial ROM Importer: Poll for new files to validate and index
+    setInterval(async () => {
+      try {
+        const files = await fs.promises.readdir(romsPath);
+        for (const file of files) {
+          const fullPath = path.join(romsPath, file);
+          const stat = await fs.promises.stat(fullPath);
+          if (stat.isFile() && !file.startsWith('.') && !file.endsWith('.meta')) {
+             const taskName = `import_rom_${file}`;
+             const exists = Array.from(this.queue.values()).some(t => t.name === taskName);
+             if (!exists) {
+                this.addTask('system', taskName, { 
+                   action: 'rom_import',
+                   path: fullPath,
+                   fileName: file
+                });
+             }
+          }
+        }
+      } catch (e) {
+        logger.error("ROM Watcher Fault", e);
+      }
+    }, 60000).unref();
   }
 
   public registerClient(res: express.Response) {
@@ -288,11 +373,14 @@ export class AdvancedQueueManager {
     this.broadcast();
 
     try {
-      const { fileName } = task as any;
+      const { fileName, localDataPath } = task as any;
       if (!fileName) throw new Error("MISSING_FILENAME");
 
-      // Verify local file exists
-      const dbPath = path.join(process.cwd(), 'database', fileName);
+      // Verify local file exists - can be in database root or subpath
+      const dbPath = localDataPath 
+        ? path.join(process.cwd(), 'database', localDataPath)
+        : path.join(process.cwd(), 'database', fileName);
+        
       if (!fs.existsSync(dbPath)) throw new Error("LOCAL_FILE_NOT_FOUND");
 
       const stats = fs.statSync(dbPath);
@@ -303,7 +391,9 @@ export class AdvancedQueueManager {
       task.progress = 50;
       this.broadcast();
 
-      await CloudStorageProvider.uploadFile(`vault/${fileName}`, buffer);
+      // Ensure vault structure
+      const cloudKey = localDataPath ? `vault/${localDataPath}` : `vault/${fileName}`;
+      await CloudStorageProvider.uploadFile(cloudKey, buffer);
 
       task.status = 'completed';
       task.message = 'Synchronized with Cloud Vault';

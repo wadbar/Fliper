@@ -28,6 +28,8 @@ import { ControlCenter } from './ui/ControlCenter';
 import { LayoutGrid, Globe } from 'lucide-react';
 import { NetplayApp } from './apps/NetplayApp';
 
+import { RetroDashboardWidget } from './ui/RetroDashboardWidget';
+
 // Strategy Pattern: Externalized custom hook for Window Management
 function useWindowManager() {
   const [openWindows, setOpenWindows] = useState<string[]>([]);
@@ -183,6 +185,11 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=2560&q=80')] bg-cover bg-center opacity-10" />
       <div className="absolute inset-0 bg-gradient-to-tr from-m3-surface via-m3-surface/60 to-transparent pointer-events-none" />
       
+      {/* Widgets Area (Right Side) */}
+      <div className="absolute top-12 right-12 z-0 flex flex-col gap-8 w-96 hidden xl:flex">
+         <RetroDashboardWidget />
+      </div>
+
       {/* Quick Access Tiles - Jump Back In */}
       <div className="absolute bottom-24 left-12 right-12 z-0 hidden lg:block">
          <div className="flex items-center gap-4 mb-5 px-2">
