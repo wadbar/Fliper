@@ -162,31 +162,31 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
 
     switch (id) {
       case 'gameManager':
-        return <OsWindow {...props} title={t('os_library')} icon={<Gamepad2 />} width={1200} height={800} minWidth={800} minHeight={600}><GameManagerApp games={games} favorites={favorites} onToggleFavorite={toggleFavorite} onRecordLaunch={onRecordLaunch} stats={stats} /></OsWindow>;
+        return <OsWindow {...props} title={t('os_library')} icon={<Gamepad2 />} defaultSize={{ width: 1200, height: 800 }}><GameManagerApp gamesProp={games} onGamesUpdate={onGamesUpdate} onSwitchMode={() => {}} favorites={favorites} toggleFavorite={toggleFavorite} onRecordLaunch={onRecordLaunch} stats={stats} /></OsWindow>;
       case 'terminal':
-        return <OsWindow {...props} title={t('os_terminal')} icon={<Terminal />} width={800} height={500}><KernelShellApp /></OsWindow>;
+        return <OsWindow {...props} title={t('os_terminal')} icon={<Terminal />} defaultSize={{ width: 800, height: 500 }}><KernelShellApp /></OsWindow>;
       case 'store':
-        return <OsWindow {...props} title={t('os_store')} icon={<ShoppingBag />} width={900} height={700}><DownloaderApp games={games} onGamesUpdate={onGamesUpdate} /></OsWindow>;
+        return <OsWindow {...props} title={t('os_store')} icon={<ShoppingBag />} defaultSize={{ width: 900, height: 700 }}><DownloaderApp /></OsWindow>;
       case 'settings':
-        return <OsWindow {...props} title={t('os_settings')} icon={<Settings />} width={800} height={600}><SettingsApp settings={settings} updateSetting={updateSetting} user={user} onLogin={onLogin} onLogout={onLogout} /></OsWindow>;
+        return <OsWindow {...props} title={t('os_settings')} icon={<Settings />} defaultSize={{ width: 800, height: 600 }}><SettingsApp /></OsWindow>;
       case 'monitor':
-        return <OsWindow {...props} title="System Monitor" icon={<Activity />} width={1000} height={600}><SystemMonitorApp /></OsWindow>;
+        return <OsWindow {...props} title="System Monitor" icon={<Activity />} defaultSize={{ width: 1000, height: 600 }}><SystemMonitorApp /></OsWindow>;
       case 'bios':
-        return <OsWindow {...props} title="BIOS Manager" icon={<Shield />} width={800} height={600}><BiosManagerApp /></OsWindow>;
+        return <OsWindow {...props} title="BIOS Manager" icon={<Shield />} defaultSize={{ width: 800, height: 600 }}><BiosManagerApp /></OsWindow>;
       case 'storage':
-        return <OsWindow {...props} title="Storage" icon={<HardDrive />} width={800} height={600}><StorageApp /></OsWindow>;
+        return <OsWindow {...props} title="Storage" icon={<HardDrive />} defaultSize={{ width: 800, height: 600 }}><StorageApp /></OsWindow>;
       case 'customizer':
-        return <OsWindow {...props} title="OS Factory" icon={<Cpu />} width={900} height={700}><CustomizerApp /></OsWindow>;
+        return <OsWindow {...props} title="OS Factory" icon={<Cpu />} defaultSize={{ width: 900, height: 700 }}><CustomizerApp /></OsWindow>;
       case 'stream':
-        return <OsWindow {...props} title="Neural Stream" icon={<Radio />} width={900} height={600}><StreamApp /></OsWindow>;
+        return <OsWindow {...props} title="Neural Stream" icon={<Radio />} defaultSize={{ width: 900, height: 600 }}><StreamApp /></OsWindow>;
       case 'leaderboards':
-        return <OsWindow {...props} title="Hall of Fame" icon={<Trophy />} width={800} height={600}><LeaderboardsApp /></OsWindow>;
+        return <OsWindow {...props} title="Hall of Fame" icon={<Trophy />} defaultSize={{ width: 800, height: 600 }}><LeaderboardsApp /></OsWindow>;
       case 'wiki':
-        return <OsWindow {...props} title="Wiki" icon={<Book />} width={1000} height={700}><WikiApp /></OsWindow>;
+        return <OsWindow {...props} title="Wiki" icon={<Book />} defaultSize={{ width: 1000, height: 700 }}><WikiApp /></OsWindow>;
       case 'neural':
-        return <OsWindow {...props} title="Neural Core" icon={<Brain />} width={1000} height={700}><NeuralCoreApp /></OsWindow>;
+        return <OsWindow {...props} title="Neural Core" icon={<Brain />} defaultSize={{ width: 1000, height: 700 }}><NeuralCoreApp /></OsWindow>;
       case 'netplay':
-        return <OsWindow {...props} title="Netplay Grid" icon={<Globe />} width={900} height={600}><NetplayApp /></OsWindow>;
+        return <OsWindow {...props} title="Netplay Grid" icon={<Globe />} defaultSize={{ width: 900, height: 600 }}><NetplayApp /></OsWindow>;
       default: return null;
     }
   };
@@ -357,10 +357,12 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
 
       {isControlCenterOpen && (
         <ControlCenter 
-           user={user} 
-           onLogin={onLogin} 
-           onLogout={onLogout} 
+           isOpen={isControlCenterOpen}
            onClose={() => setIsControlCenterOpen(false)} 
+           volume={50}
+           onVolumeChange={() => {}}
+           brightness={80}
+           onBrightnessChange={() => {}}
         />
       )}
     </div>
