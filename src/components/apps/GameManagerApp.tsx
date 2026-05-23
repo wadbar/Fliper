@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Game } from '../../data/games';
-import { Play, Star, Search, Settings, FolderSync, Sparkles, Loader2, Database, Info, Zap, CheckCircle2, Heart, Clock, X, LayoutGrid, List } from 'lucide-react';
+import { Play, Star, Search, Settings, FolderSync, Sparkles, Loader2, Database, Info, Zap, CheckCircle2, Heart, Clock, X, LayoutGrid, List, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { aiOrchestrator } from '../../services/ai/orchestrator';
 import { GameDetailsModal } from '../modals/GameDetailsModal';
 import { GameImportModal } from '../modals/GameImportModal';
+import { LibrarySyncModal } from '../modals/LibrarySyncModal';
 import Fuse from 'fuse.js';
 import { Plus } from 'lucide-react';
 
@@ -122,6 +123,7 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = (props) => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(gamesProp[0] || null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPlatform, setFilterPlatform] = useState('');
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
@@ -266,6 +268,15 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = (props) => {
         </div>
 
         <div className="p-8 border-t border-m3-outline/10 space-y-4">
+           <button 
+              onClick={() => setIsSyncModalOpen(true)}
+              className="m3-button-outline w-full py-4 text-xs tracking-widest relative overflow-hidden group"
+           >
+              <div className="absolute inset-0 bg-m3-secondary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              <div className="relative flex items-center justify-center gap-2">
+                 <RefreshCcw size={16} /> Sync Subsystems
+              </div>
+           </button>
            <button 
               onClick={() => setIsImportModalOpen(true)}
               className="m3-button-outline w-full py-4 text-xs tracking-widest"
@@ -467,6 +478,13 @@ export const GameManagerApp: React.FC<GameManagerAppProps> = (props) => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImport={(newGame) => { onGamesUpdate(prev => [newGame, ...prev]); setSelectedGame(newGame); }}
+      />
+      <LibrarySyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        onSyncComplete={() => {
+           // Provide callback logic if desired or just let the user know
+        }}
       />
     </div>
   );

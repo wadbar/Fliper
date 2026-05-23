@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { syncLaunchBoxData, ramDatabase } from "../../core/bridge";
+import { syncLaunchBoxData, syncBatoceraData, syncRetrobatData, syncLemuroidData, ramDatabase } from "../../core/bridge";
 import { SecurityProvider } from "../core/SecurityProvider";
 import { sanitize } from "../utils/Sanitizer";
 import { logger } from "../core/Logger";
@@ -12,11 +12,30 @@ const router = Router();
 
 router.post("/scan", async (req, res) => {
     try {
-        const lbPath = SecurityProvider.sanitizePath(req.body.lbPath);
-        if (!lbPath) return res.status(400).json({ error: "Missing lbPath" });
+        const { lbPath, provider, targetPath } = req.body;
         
-        await syncLaunchBoxData(lbPath);
-        res.json({ status: "ok", message: "LaunchBox data synchronized" });
+        // Retrocompatibility mapping
+        const pPath = targetPath || lbPath;
+        const sPath = SecurityProvider.sanitizePath(pPath);
+        if (!sPath) return res.status(400).json({ error: "Missing scan path" });
+        
+        switch (provider?.toLowerCase()) {
+            case 'batocera':
+                await syncBatoceraData(sPath);
+                break;
+            case 'retrobat':
+                await syncRetrobatData(sPath);
+                break;
+            case 'lemuroid':
+                await syncLemuroidData(sPath);
+                break;
+            case 'launchbox':
+            default:
+                await syncLaunchBoxData(sPath);
+                break;
+        }
+
+        res.json({ status: "ok", message: `Data synchronized successfully for provider: ${provider || 'launchbox'}` });
     } catch (error: any) {
         logger.error('API /api/scan error', error);
         res.status(500).json({ error: error.message || 'Internal Server Error' });

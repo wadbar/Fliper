@@ -6,7 +6,6 @@ import { OsWindow } from './os/Window';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useKernel } from '../contexts/KernelContext';
 
-// We implement simple Desktop Apps here
 import { GameManagerApp } from './apps/GameManagerApp';
 import { KernelShellApp } from './apps/KernelShellApp';
 import { DownloaderApp } from './apps/DownloaderApp';
@@ -19,35 +18,27 @@ import { StreamApp } from './apps/StreamApp';
 import { LeaderboardsApp } from './apps/LeaderboardsApp';
 import { WikiApp } from './apps/WikiApp';
 import { NeuralCoreApp } from './apps/NeuralCoreApp';
-
-// Advanced UI Component
-import { CrtOverlay } from './CrtOverlay';
-import { Shield, Book, Brain, LogIn, LogOut, User as UserIcon, History } from 'lucide-react';
-import { User } from 'firebase/auth';
-import { ControlCenter } from './ui/ControlCenter';
-import { LayoutGrid, Globe } from 'lucide-react';
 import { NetplayApp } from './apps/NetplayApp';
 
+import { CrtOverlay } from './CrtOverlay';
+import { Shield, Book, Brain, LogIn, LogOut, User as UserIcon, History, LayoutGrid, Globe } from 'lucide-react';
+import { User } from 'firebase/auth';
+import { ControlCenter } from './ui/ControlCenter';
 import { RetroDashboardWidget } from './ui/RetroDashboardWidget';
+import { SystemResourceWidget } from './ui/SystemResourceWidget';
 
-// Strategy Pattern: Externalized custom hook for Window Management
 function useWindowManager() {
   const [openWindows, setOpenWindows] = useState<string[]>([]);
   const [activeWindow, setActiveWindow] = useState<string>('');
 
   const bringToFront = useCallback((id: string) => {
-    setOpenWindows(prev => {
-      const filtered = prev.filter(w => w !== id);
-      return [...filtered, id];
-    });
+    setOpenWindows(prev => [...prev.filter(w => w !== id), id]);
     setActiveWindow(id);
   }, []);
 
   const toggleWindow = useCallback((id: string) => {
     if (openWindows.includes(id)) {
-      if (activeWindow !== id) {
-        bringToFront(id);
-      }
+      if (activeWindow !== id) bringToFront(id);
     } else {
       setOpenWindows(prev => [...prev, id]);
       setActiveWindow(id);
@@ -74,7 +65,6 @@ function useWindowManager() {
   return { openWindows, activeWindow, bringToFront, toggleWindow, closeWindow, getZIndex };
 }
 
-// Observer Pattern hook for Telemetry
 function useHardwareStats() {
   const [stats, setStats] = useState({ cpu: 12, ram: 14.5 });
 
@@ -125,18 +115,8 @@ interface DesktopModeProps {
 }
 
 export const DesktopMode: React.FC<DesktopModeProps> = ({ 
-  games, 
-  onGamesUpdate, 
-  onSwitchMode, 
-  favorites, 
-  toggleFavorite,
-  user,
-  onLogin,
-  onLogout,
-  stats,
-  onRecordLaunch,
-  settings,
-  updateSetting
+  games, onGamesUpdate, onSwitchMode, favorites, toggleFavorite,
+  user, onLogin, onLogout, stats, onRecordLaunch, settings, updateSetting
 }) => {
   const { t } = useLanguage();
   const { dispatch, lastCommand } = useKernel();
@@ -145,15 +125,12 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
   const [activeTasks, setActiveTasks] = useState(0);
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
 
-  // Kernel Command Listener
   useEffect(() => {
     if (lastCommand?.action === 'open_window') {
-      const windowId = lastCommand.payload as string;
-      toggleWindow(windowId);
+      toggleWindow(lastCommand.payload as string);
     }
   }, [lastCommand, toggleWindow]);
 
-  // Monitor SSE Backend Tasks (Observer)
   useEffect(() => {
     let isMounted = true;
     const eventSource = new EventSource('/api/system/download/status');
@@ -165,197 +142,226 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
          setActiveTasks(active);
       } catch (err) { console.error("SSE parse error", err); }
     };
-    
-    // Auto-reconnect handling (Native browser EventSource reconnects automatically, but we want to ensure no state updates on error)
-    eventSource.onerror = () => {
-       // Minimal handle since native EventSource will try to reconnect.
-    };
-
+    eventSource.onerror = () => {};
     return () => {
       isMounted = false;
       eventSource.close();
     };
   }, []);
 
+  // Registry mapped windows to render loop
+  const renderWindow = (id: string) => {
+    const props = {
+      isOpen: true,
+      onClose: () => closeWindow(id),
+      onFocus: () => bringToFront(id),
+      isActive: activeWindow === id,
+      zIndex: getZIndex(id)
+    };
+
+    switch (id) {
+      case 'gameManager':
+        return <OsWindow {...props} title={t('os_library')} icon={<Gamepad2 />} width={1200} height={800} minWidth={800} minHeight={600}><GameManagerApp games={games} favorites={favorites} onToggleFavorite={toggleFavorite} onRecordLaunch={onRecordLaunch} stats={stats} /></OsWindow>;
+      case 'terminal':
+        return <OsWindow {...props} title={t('os_terminal')} icon={<Terminal />} width={800} height={500}><KernelShellApp /></OsWindow>;
+      case 'store':
+        return <OsWindow {...props} title={t('os_store')} icon={<ShoppingBag />} width={900} height={700}><DownloaderApp games={games} onGamesUpdate={onGamesUpdate} /></OsWindow>;
+      case 'settings':
+        return <OsWindow {...props} title={t('os_settings')} icon={<Settings />} width={800} height={600}><SettingsApp settings={settings} updateSetting={updateSetting} user={user} onLogin={onLogin} onLogout={onLogout} /></OsWindow>;
+      case 'monitor':
+        return <OsWindow {...props} title="System Monitor" icon={<Activity />} width={1000} height={600}><SystemMonitorApp /></OsWindow>;
+      case 'bios':
+        return <OsWindow {...props} title="BIOS Manager" icon={<Shield />} width={800} height={600}><BiosManagerApp /></OsWindow>;
+      case 'storage':
+        return <OsWindow {...props} title="Storage" icon={<HardDrive />} width={800} height={600}><StorageApp /></OsWindow>;
+      case 'customizer':
+        return <OsWindow {...props} title="OS Factory" icon={<Cpu />} width={900} height={700}><CustomizerApp /></OsWindow>;
+      case 'stream':
+        return <OsWindow {...props} title="Neural Stream" icon={<Radio />} width={900} height={600}><StreamApp /></OsWindow>;
+      case 'leaderboards':
+        return <OsWindow {...props} title="Hall of Fame" icon={<Trophy />} width={800} height={600}><LeaderboardsApp /></OsWindow>;
+      case 'wiki':
+        return <OsWindow {...props} title="Wiki" icon={<Book />} width={1000} height={700}><WikiApp /></OsWindow>;
+      case 'neural':
+        return <OsWindow {...props} title="Neural Core" icon={<Brain />} width={1000} height={700}><NeuralCoreApp /></OsWindow>;
+      case 'netplay':
+        return <OsWindow {...props} title="Netplay Grid" icon={<Globe />} width={900} height={600}><NetplayApp /></OsWindow>;
+      default: return null;
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-m3-surface font-sans text-m3-on-surface overflow-hidden flex flex-col relative select-none">
+    <div className="fixed inset-0 bg-[var(--md-sys-color-surface)] font-sans text-[var(--md-sys-color-on-surface)] overflow-hidden flex flex-col relative select-none">
       <CrtOverlay />
 
-      {/* Desktop Background / Wallpaper */}
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=2560&q=80')] bg-cover bg-center opacity-10" />
-      <div className="absolute inset-0 bg-gradient-to-tr from-m3-surface via-m3-surface/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=2560&q=80')] bg-cover bg-center opacity-5 mix-blend-overlay" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-[var(--md-sys-color-surface)] via-[var(--md-sys-color-surface-container)] to-[var(--md-sys-color-surface-variant)] opacity-90 pointer-events-none" />
       
-      {/* Widgets Area (Right Side) */}
-      <div className="absolute top-12 right-12 z-0 flex flex-col gap-8 w-96 hidden xl:flex">
-         <RetroDashboardWidget />
-      </div>
-
-      {/* Quick Access Tiles - Jump Back In */}
-      <div className="absolute bottom-24 left-12 right-12 z-0 hidden lg:block">
-         <div className="flex items-center gap-4 mb-5 px-2">
-            <div className="w-8 h-8 rounded-full bg-m3-primary/10 flex items-center justify-center">
-              <History size={16} className="text-m3-primary" />
-            </div>
-            <h3 className="text-xs font-black text-m3-on-surface-variant uppercase tracking-[0.2em]">Jump Back In</h3>
-         </div>
-         <div className="flex gap-6">
-            {Object.entries(stats)
-              .filter(([_, s]: any) => s.lastPlayed)
-              .sort((a: any, b: any) => b[1].lastPlayed.seconds - a[1].lastPlayed.seconds)
-              .slice(0, 4)
-              .map(([id, s]: any) => {
-                const game = games.find(g => g.id === id);
-                if (!game) return null;
-                return (
-                  <motion.button
-                    key={id}
-                    whileHover={{ y: -8, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => onRecordLaunch(game)}
-                    className="group relative w-72 h-40 m3-card bg-m3-surface-variant/40 hover:bg-m3-surface-variant/60 shadow-xl transition-all"
-                  >
-                    <img src={game.fanArt} className="w-full h-full object-cover opacity-50 group-hover:opacity-90 transition-opacity" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-m3-surface via-m3-surface/20 to-transparent" />
-                    <div className="absolute bottom-5 left-5 text-left">
-                       <p className="text-[9px] font-black text-m3-primary uppercase tracking-[0.15em] mb-1.5">{game.platform}</p>
-                       <h4 className="text-base font-bold text-white tracking-tight truncate w-60">{game.title}</h4>
-                    </div>
-                  </motion.button>
-                );
-              })}
-         </div>
-      </div>
-
-      {/* Desktop Icons - Grid Layout */}
-      <div className="absolute inset-0 p-8 flex flex-col flex-wrap gap-8 items-start z-0 max-h-[calc(100vh-120px)]">
-        {[
-          { id: 'gameManager', icon: Gamepad2, label: t('os_library'), color: 'text-m3-primary', bg: 'bg-m3-primary/10' },
-          { id: 'terminal', icon: Terminal, label: t('os_terminal'), color: 'text-m3-on-surface-variant', bg: 'bg-m3-surface-variant' },
-          { id: 'store', icon: ShoppingBag, label: t('os_store'), color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-          { id: 'monitor', icon: Activity, label: 'Monitor', color: 'text-rose-400', bg: 'bg-rose-500/10' },
-          { id: 'bios', icon: Shield, label: 'BIOS', color: 'text-amber-400', bg: 'bg-amber-500/10' },
-          { id: 'storage', icon: HardDrive, label: 'Storage', color: 'text-sky-400', bg: 'bg-sky-500/10' },
-          { id: 'customizer', icon: Cpu, label: 'OS Factory', color: 'text-m3-primary', bg: 'bg-m3-primary/10' },
-          { id: 'stream', icon: Radio, label: 'Stream', color: 'text-red-400', bg: 'bg-red-500/10' },
-          { id: 'netplay', icon: Globe, label: 'Netplay', color: 'text-sky-400', bg: 'bg-sky-500/10' },
-          { id: 'leaderboards', icon: Trophy, label: 'Hall of Fame', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-          { id: 'wiki', icon: Book, label: 'Wiki', color: 'text-sky-400', bg: 'bg-sky-500/10' },
-          { id: 'neural', icon: Brain, label: 'Neural', color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
-        ].map(app => (
-          <button 
-            key={app.id}
-            onDoubleClick={() => toggleWindow(app.id)} 
-            className="flex flex-col items-center gap-2 group w-24"
-          >
-            <div className={`w-16 h-16 rounded-[24px] ${app.bg} border border-m3-outline/20 ${app.color} flex items-center justify-center backdrop-blur-md shadow-lg group-hover:bg-opacity-30 group-hover:scale-110 transition-all duration-300`}>
-              <app.icon size={30} />
-            </div>
-            <span className="text-white text-[11px] font-bold drop-shadow-md text-center leading-tight transition-all group-hover:text-m3-primary">{app.label}</span>
-          </button>
-        ))}
+      {/* Grid Dashboard Layout (MD3 Resposive) */}
+      <div className="relative z-0 max-w-7xl mx-auto w-full h-[calc(100vh-80px)] p-6 overflow-y-auto no-scrollbar grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
         
-        <button onDoubleClick={() => toggleWindow('settings')} className="flex flex-col items-center gap-2 group w-24 mt-auto">
-          <div className="w-16 h-16 rounded-[24px] bg-m3-surface-variant border border-m3-outline/20 text-m3-on-surface-variant flex items-center justify-center backdrop-blur-md shadow-lg group-hover:bg-m3-on-surface-variant/80 group-hover:scale-110 transition-all duration-300">
-            <Settings size={30} />
-          </div>
-          <span className="text-white text-[11px] font-bold drop-shadow-md transition-all group-hover:text-m3-primary">{t('os_settings')}</span>
-        </button>
-      </div>
-
-      {/* Taskbar Redesign */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[98%] max-w-7xl h-16 bg-m3-surface-variant/60 backdrop-blur-2xl border border-m3-outline/20 rounded-full flex items-center px-2 z-50 shadow-2xl">
-        <button 
-          onClick={onSwitchMode} 
-          className="flex items-center gap-3 px-6 h-12 m3-button-filled shadow-lg shadow-m3-primary/20 shrink-0"
-        >
-          <Gamepad2 size={18} /> 
-          <span className="text-xs uppercase tracking-widest font-black">Fliper Mode</span>
-        </button>
-
-        <div className="w-px h-8 bg-m3-outline/20 mx-4" />
-
-        <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {openWindows.map(id => (
-            <button 
-              key={id}
-              onClick={() => bringToFront(id)}
-              className={`px-5 h-12 flex items-center gap-2.5 rounded-full text-xs font-bold transition-all min-w-[140px] max-w-[200px] shrink-0 border ${
-                activeWindow === id 
-                ? 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30 shadow-inner' 
-                : 'bg-m3-surface/20 border-m3-outline/10 text-m3-on-surface-variant hover:bg-m3-surface/40 hover:text-white'
-              }`}
+        {/* Left App Grid Panel */}
+        <div className="md:col-span-8 grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 content-start">
+          {[
+            { id: 'gameManager', icon: Gamepad2, label: t('os_library') },
+            { id: 'terminal', icon: Terminal, label: t('os_terminal') },
+            { id: 'store', icon: ShoppingBag, label: t('os_store') },
+            { id: 'monitor', icon: Activity, label: 'Monitor' },
+            { id: 'bios', icon: Shield, label: 'BIOS' },
+            { id: 'storage', icon: HardDrive, label: 'Storage' },
+            { id: 'customizer', icon: Cpu, label: 'OS Factory' },
+            { id: 'stream', icon: Radio, label: 'Stream' },
+            { id: 'netplay', icon: Globe, label: 'Netplay' },
+            { id: 'leaderboards', icon: Trophy, label: 'Hall of Fame' },
+            { id: 'wiki', icon: Book, label: 'Wiki' },
+            { id: 'neural', icon: Brain, label: 'Neural' },
+            { id: 'settings', icon: Settings, label: t('os_settings') },
+          ].map(app => (
+            <motion.button 
+              key={app.id}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => toggleWindow(app.id)} 
+              className="flex flex-col items-center gap-2 group p-2"
             >
-              <div className="shrink-0">
-                {id === 'gameManager' && <Gamepad2 size={16} />}
-                {id === 'terminal' && <Terminal size={16} />}
-                {id === 'store' && <ShoppingBag size={16} />}
-                {id === 'monitor' && <Activity size={16} />}
-                {id === 'bios' && <Shield size={16} />}
-                {id === 'storage' && <HardDrive size={16} />}
-                {id === 'customizer' && <Cpu size={16} />}
-                {id === 'stream' && <Radio size={16} />}
-                {id === 'leaderboards' && <Trophy size={16} />}
-                {id === 'wiki' && <Book size={16} />}
-                {id === 'neural' && <Brain size={16} />}
-                {id === 'settings' && <Settings size={16} />}
+              <div className="w-14 h-14 rounded-3xl bg-[var(--md-sys-color-surface-variant)] border border-[var(--md-sys-color-outline)]/20 text-[var(--md-sys-color-primary)] flex items-center justify-center shadow-md group-hover:bg-[var(--md-sys-color-primary-container)] group-hover:text-[var(--md-sys-color-on-primary-container)] transition-colors duration-300">
+                <app.icon size={26} />
               </div>
-              <span className="truncate capitalize">{id}</span>
-              {activeWindow === id && <div className="w-1.5 h-1.5 rounded-full bg-m3-primary ml-auto shadow-[0_0_8px_rgba(208,188,255,0.5)]" />}
-            </button>
+              <span className="text-[var(--md-sys-color-on-surface)] text-[11px] font-bold text-center leading-tight transition-all group-hover:text-[var(--md-sys-color-primary)] opacity-80">{app.label}</span>
+            </motion.button>
           ))}
         </div>
 
-        <div className="w-px h-8 bg-m3-outline/20 mx-4" />
-
-        {/* System User Tray */}
-        <div className="flex items-center gap-2">
-          {user ? (
-            <button 
-              onClick={setIsControlCenterOpen.bind(null, !isControlCenterOpen)}
-              className="flex items-center gap-3 pr-2 pl-3 h-12 bg-m3-secondary-container text-m3-on-secondary-container rounded-full border border-m3-outline/20 hover:bg-m3-secondary-container/80 transition-all group overflow-hidden"
-            >
-               {user.photoURL ? (
-                 <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full border border-white/10" referrerPolicy="no-referrer" />
-               ) : (
-                 <div className="w-8 h-8 rounded-full bg-m3-primary/20 flex items-center justify-center">
-                   <UserIcon size={16} className="text-m3-primary" />
-                 </div>
-               )}
-               <div className="flex flex-col items-start pr-2">
-                  <span className="text-[10px] font-black uppercase opacity-60 leading-none mb-0.5">Operator</span>
-                  <span className="text-xs font-bold truncate max-w-[80px] leading-none">{user.displayName || 'Guest'}</span>
-               </div>
-            </button>
-          ) : (
-            <button 
-              onClick={onLogin}
-              className="m3-button-tonal h-12 px-6"
-            >
-              <LogIn size={18} />
-              <span className="text-[11px] font-black uppercase tracking-widest">Connect</span>
-            </button>
-          )}
-
-           <button 
-             onClick={() => setIsControlCenterOpen(!isControlCenterOpen)}
-             className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${isControlCenterOpen ? 'bg-m3-primary text-m3-on-primary shadow-lg shadow-m3-primary/30' : 'bg-m3-surface/40 hover:bg-m3-surface/60 text-m3-on-surface-variant'}`}
-           >
-              <LayoutGrid size={22} />
-           </button>
-        </div>
-
-        <div className="hidden xl:flex items-center gap-5 text-xs font-mono text-m3-on-surface-variant px-6 ml-2">
-          <div className="flex items-center gap-2" title="CPU">
-            <Cpu size={14} className="text-m3-primary" />
-            <span className="font-bold">{hardwareStats.cpu}%</span>
-          </div>
-          <div className="flex items-center gap-2" title="RAM">
-            <HardDrive size={14} className="text-emerald-400" />
-            <span className="font-bold">{hardwareStats.ram.toFixed(1)}GB</span>
-          </div>
+        {/* Right Widgets Panel */}
+        <div className="md:col-span-4 flex flex-col gap-6">
+           <RetroDashboardWidget />
+           <SystemResourceWidget />
+           
+           {/* Recent Activity Card */}
+           <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline)]/10 rounded-[28px] p-6 shadow-sm overflow-hidden flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-2xl bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]">
+                  <History size={18} />
+                </div>
+                <h3 className="text-xs font-bold text-[var(--md-sys-color-on-surface)] uppercase tracking-widest">Recent Activity</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {Object.entries(stats)
+                  .filter(([_, s]: any) => s.lastPlayed)
+                  .sort((a: any, b: any) => b[1].lastPlayed.seconds - a[1].lastPlayed.seconds)
+                  .slice(0, 3)
+                  .map(([id, s]: any) => {
+                    const game = games.find(g => g.id === id);
+                    if (!game) return null;
+                    return (
+                      <motion.button
+                        key={id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => onRecordLaunch(game)}
+                        className="relative h-24 rounded-2xl overflow-hidden bg-[var(--md-sys-color-surface-variant)] shadow-sm group"
+                      >
+                        <img src={game.fanArt} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--md-sys-color-surface)]/90 via-[var(--md-sys-color-surface)]/20 to-transparent" />
+                        <div className="absolute bottom-3 left-4 text-left">
+                           <p className="text-[9px] font-bold text-[var(--md-sys-color-primary)] uppercase tracking-widest mb-0.5">{game.platform}</p>
+                           <h4 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] tracking-tight truncate w-48">{game.title}</h4>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+              </div>
+           </div>
         </div>
       </div>
-    </div>
 
+      {/* Taskbar Redesign */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[98%] max-w-7xl h-16 bg-[var(--md-sys-color-surface-container-high)]/80 backdrop-blur-3xl border border-[var(--md-sys-color-outline)]/10 rounded-[32px] flex items-center px-4 z-50 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
+        <button 
+          onClick={onSwitchMode} 
+          className="flex items-center justify-center gap-2 px-5 h-10 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-[20px] font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-opacity shrink-0 shadow-sm"
+        >
+          <Gamepad2 size={16} /> 
+          <span>Fliper Mode</span>
+        </button>
+
+        <div className="w-px h-6 bg-[var(--md-sys-color-outline)]/20 mx-4" />
+
+        <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <AnimatePresence>
+            {openWindows.map(id => (
+              <motion.button 
+                key={id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                onClick={() => bringToFront(id)}
+                className={`px-4 h-10 flex items-center gap-2.5 rounded-[20px] text-xs font-bold transition-all min-w-[120px] max-w-[180px] shrink-0 border ${
+                  activeWindow === id 
+                  ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] border-[var(--md-sys-color-secondary-container)] shadow-sm' 
+                  : 'bg-[var(--md-sys-color-surface)] border-[var(--md-sys-color-outline)]/10 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                <div className="shrink-0 flex items-center justify-center">
+                  {id === 'gameManager' && <Gamepad2 size={14} />}
+                  {id === 'terminal' && <Terminal size={14} />}
+                  {id === 'store' && <ShoppingBag size={14} />}
+                  {id === 'monitor' && <Activity size={14} />}
+                  {id === 'bios' && <Shield size={14} />}
+                  {id === 'storage' && <HardDrive size={14} />}
+                  {id === 'customizer' && <Cpu size={14} />}
+                  {id === 'stream' && <Radio size={14} />}
+                  {id === 'leaderboards' && <Trophy size={14} />}
+                  {id === 'wiki' && <Book size={14} />}
+                  {id === 'neural' && <Brain size={14} />}
+                  {id === 'settings' && <Settings size={14} />}
+                  {id === 'netplay' && <Globe size={14} />}
+                </div>
+                <span className="truncate capitalize">{id}</span>
+              </motion.button>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        <div className="hidden md:flex w-px h-6 bg-[var(--md-sys-color-outline)]/20 mx-4" />
+
+        {/* System User Tray / Control Center Toggle */}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-4 text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] px-3 mr-1 uppercase tracking-widest">
+            <div className="flex items-center gap-1.5" title="CPU">
+              <Cpu size={12} className="text-[var(--md-sys-color-primary)]" />
+              <span className="font-bold">{hardwareStats.cpu}%</span>
+            </div>
+            <div className="flex items-center gap-1.5" title="RAM">
+              <HardDrive size={12} className="text-[var(--md-sys-color-tertiary)]" />
+              <span className="font-bold">{hardwareStats.ram.toFixed(1)}GB</span>
+            </div>
+          </div>
+
+          <button 
+             onClick={() => setIsControlCenterOpen(!isControlCenterOpen)}
+             className={`w-10 h-10 flex items-center justify-center rounded-[20px] transition-all cursor-pointer ${isControlCenterOpen ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-md' : 'bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-secondary-container)] hover:text-[var(--md-sys-color-on-secondary-container)]'}`}
+           >
+              <LayoutGrid size={18} />
+           </button>
+        </div>
+      </div>
+      
+      {/* Render all open windows */}
+      {openWindows.map(id => (
+         <React.Fragment key={id}>
+           {renderWindow(id)}
+         </React.Fragment>
+      ))}
+
+      {isControlCenterOpen && (
+        <ControlCenter 
+           user={user} 
+           onLogin={onLogin} 
+           onLogout={onLogout} 
+           onClose={() => setIsControlCenterOpen(false)} 
+        />
+      )}
+    </div>
   );
 };

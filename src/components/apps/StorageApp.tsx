@@ -91,7 +91,33 @@ export const StorageApp: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const currentFiles = tab === 'local' ? localFiles : cloudFiles;
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('vfs_search_history');
+      if (stored) setSearchHistory(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const saveSearch = (query: string) => {
+    if (!query.trim()) return;
+    const next = [query, ...searchHistory.filter(q => q !== query)].slice(0, 10);
+    setSearchHistory(next);
+    localStorage.setItem('vfs_search_history', JSON.stringify(next));
+  };
+
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('vfs_search_history');
+  };
+
+  const currentFiles = (tab === 'local' ? localFiles : cloudFiles).filter(
+    (file) => file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   const totalSize = localFiles.reduce((acc, f) => acc + f.size, 0);
 
   return (
@@ -145,12 +171,46 @@ export const StorageApp: React.FC = () => {
               LAYERS
             </button>
          </div>
-         <button 
-           onClick={refresh}
-           className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-zinc-100"
-         >
-           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-         </button>
+         <div className="flex items-center gap-3 relative">
+           <input 
+             type="text" 
+             placeholder="Search files..."
+             value={searchQuery}
+             onFocus={() => setShowHistory(true)}
+             onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+             onChange={(e) => setSearchQuery(e.target.value)}
+             onKeyDown={(e) => {
+               if (e.key === 'Enter') saveSearch(searchQuery);
+             }}
+             className="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-[10px] text-zinc-300 focus:outline-none focus:border-sky-500/50 relative z-10"
+           />
+           {showHistory && searchHistory.length > 0 && (
+             <div className="absolute top-full right-8 mt-1 w-48 bg-zinc-900 border border-zinc-800 shadow-2xl rounded-lg overflow-hidden z-50">
+               <div className="flex justify-between items-center px-2 py-1 bg-zinc-800/50">
+                 <span className="text-[9px] text-zinc-500 uppercase">Recent</span>
+                 <button onClick={clearHistory} className="text-[9px] text-rose-400 hover:text-rose-300">Clear</button>
+               </div>
+               <ul>
+                 {searchHistory.map((q, i) => (
+                   <li key={i}>
+                     <button
+                       onClick={() => setSearchQuery(q)}
+                       className="w-full text-left px-3 py-1.5 text-[10px] text-zinc-300 hover:bg-zinc-800 transition-colors"
+                     >
+                       {q}
+                     </button>
+                   </li>
+                 ))}
+               </ul>
+             </div>
+           )}
+           <button 
+             onClick={refresh}
+             className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-zinc-100"
+           >
+             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+           </button>
+         </div>
       </div>
 
       {/* File List */}

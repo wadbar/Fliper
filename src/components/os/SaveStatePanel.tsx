@@ -58,6 +58,20 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
   const [diffViewIds, setDiffViewIds] = useState<[string, string] | null>(null);
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [communityNews, setCommunityNews] = useState<string | null>(null);
+
+  const fetchCommunityNews = async () => {
+    try {
+      setCommunityNews("Fetching latest community news...");
+      const res = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+      const data = await res.json();
+      setCommunityNews(data.title.substring(0, 50) + "...");
+    } catch (e) {
+      setCommunityNews("Failed to load news");
+    }
+    setTimeout(() => setCommunityNews(null), 5000);
+  };
+
 
   const fetchSyncStatus = useCallback(async () => {
     try {
@@ -234,91 +248,120 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
   };
 
   return (
-    <div className="flex flex-col h-full bg-m3-surface-variant/30 backdrop-blur-2xl rounded-[32px] border border-m3-outline/10 overflow-hidden relative">
-      <header className="p-6 border-b border-m3-outline/10 space-y-4 bg-m3-primary/5 shrink-0">
-         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <div className="p-2 bg-m3-primary/20 rounded-xl text-m3-primary">
-                  <RotateCcw size={20} />
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 max-w-7xl mx-auto h-full w-full bg-[var(--md-sys-color-surface-container)] backdrop-blur-2xl rounded-3xl border border-[var(--md-sys-color-outline)]/20 overflow-hidden relative">
+      <div className="md:col-span-4 lg:col-span-3 flex flex-col border-b md:border-b-0 md:border-r border-[var(--md-sys-color-outline)]/10 bg-[var(--md-sys-color-surface)]/50 shrink-0">
+         <header className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[var(--md-sys-color-primary)]/20 rounded-3xl text-[var(--md-sys-color-primary)]">
+                     <RotateCcw size={20} />
+                  </div>
+                  <h3 className="text-sm font-black text-[var(--md-sys-color-on-surface)] uppercase tracking-[0.2em]">Restore Nodes</h3>
                </div>
-               <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Restore Nodes</h3>
-            </div>
-            <div className="flex items-center gap-2">
-               <AnimatePresence>
-                  {selectedIds.size > 0 && (
-                    <motion.div 
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="flex items-center gap-2"
-                    >
-                       <button 
-                         onClick={deleteSelected} 
-                         className="p-3 bg-m3-error/20 text-m3-error rounded-full hover:bg-m3-error hover:text-white transition-all shadow-lg active:scale-95"
+               <div className="flex items-center gap-2">
+                  <AnimatePresence>
+                     {selectedIds.size > 0 && (
+                       <motion.div 
+                         initial={{ opacity: 0, x: 20 }}
+                         animate={{ opacity: 1, x: 0 }}
+                         exit={{ opacity: 0, x: 20 }}
+                         className="flex items-center gap-2"
                        >
-                          <Trash2 size={16} />
-                       </button>
-                    </motion.div>
-                  )}
-               </AnimatePresence>
-               <button 
-                 onClick={handleCapture}
-                 disabled={isCapturing}
-                 className="m3-button-filled px-6 py-2 text-[10px] tracking-widest gap-2"
-               >
-                  {isCapturing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                  Capture
-               </button>
+                          <button 
+                            onClick={deleteSelected} 
+                            className="p-3 bg-[var(--md-sys-color-error)]/20 text-[var(--md-sys-color-error)] rounded-full hover:bg-[var(--md-sys-color-error)] hover:text-white transition-all shadow-lg active:scale-95"
+                          >
+                             <Trash2 size={16} />
+                          </button>
+                       </motion.div>
+                     )}
+                  </AnimatePresence>
+                  <button 
+                    onClick={handleCapture}
+                    disabled={isCapturing}
+                    className="flex items-center justify-center bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-full px-6 py-2 text-[10px] font-black uppercase tracking-widest gap-2 hover:opacity-80 transition-opacity"
+                  >
+                     {isCapturing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                     Capture
+                  </button>
+               </div>
             </div>
-         </div>
 
-         <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-4 bg-m3-surface/30 rounded-2xl p-2 border border-m3-outline/5">
-                <div className="flex-1 flex items-center gap-2 px-3">
-                   <span className="text-[9px] font-black text-m3-outline uppercase tracking-widest">Order:</span>
-                   <select 
-                     value={sortBy} 
-                     onChange={(e) => setSortBy(e.target.value as any)}
-                     className="bg-transparent text-[10px] font-black text-white uppercase outline-none cursor-pointer"
+            <div className="flex flex-col gap-3">
+               <div className="flex flex-col xl:flex-row xl:items-center gap-4 bg-[var(--md-sys-color-surface-variant)]/30 rounded-3xl p-3 border border-[var(--md-sys-color-outline)]/10">
+                   <div className="flex-1 flex items-center gap-2 px-2">
+                      <span className="text-[9px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-widest">Order:</span>
+                      <select 
+                        value={sortBy} 
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="bg-transparent text-[10px] font-black text-[var(--md-sys-color-on-surface)] uppercase outline-none cursor-pointer"
+                      >
+                         <option value="newest" className="bg-[var(--md-sys-color-surface-container)]">Newest</option>
+                         <option value="oldest" className="bg-[var(--md-sys-color-surface-container)]">Oldest</option>
+                         <option value="alphabetical" className="bg-[var(--md-sys-color-surface-container)]">Alpha</option>
+                         <option value="session" className="bg-[var(--md-sys-color-surface-container)]">Session</option>
+                      </select>
+                   </div>
+                   <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
+                   <button 
+                      onClick={() => setIsGroupingEnabled(!isGroupingEnabled)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all ${isGroupingEnabled ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-outline)] border border-transparent'}`}
                    >
-                      <option value="newest" className="bg-m3-surface">Newest</option>
-                      <option value="oldest" className="bg-m3-surface">Oldest</option>
-                      <option value="alphabetical" className="bg-m3-surface">Alpha</option>
-                      <option value="session" className="bg-m3-surface">Session</option>
-                   </select>
+                      {isGroupingEnabled ? <Layers size={14} /> : <History size={14} />}
+                      {isGroupingEnabled ? 'Grouped' : 'Flat List'}
+                   </button>
+                   <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
+                   <button 
+                      onClick={toggleSync}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all ${isSyncEnabled ? 'bg-[var(--md-sys-color-primary)]/20 text-[var(--md-sys-color-primary)] shadow-lg shadow-[var(--md-sys-color-primary)]/10' : 'bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-outline)]'}`}
+                   >
+                      {isSyncEnabled ? <Cloud size={14} /> : <CloudOff size={14} />}
+                      {isSyncEnabled ? 'Live Sync' : 'Static'}
+                   </button>
+                   <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
+                   <button 
+                      onClick={() => {
+                        const html = document.documentElement;
+                        const isDark = html.dataset.theme === 'dark' || !html.dataset.theme;
+                        html.dataset.theme = isDark ? 'light' : 'dark';
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]/60"
+                   >
+                     Theme
+                   </button>
+                   <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
+                   <button 
+                      onClick={fetchCommunityNews}
+                      className="flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]/60"
+                   >
+                     {communityNews ? communityNews : 'News'}
+                   </button>
                 </div>
-                <div className="w-px h-4 bg-m3-outline/10" />
-                <button 
-                   onClick={() => setIsGroupingEnabled(!isGroupingEnabled)}
-                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isGroupingEnabled ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-m3-surface-variant/40 text-m3-outline border border-transparent'}`}
-                >
-                   {isGroupingEnabled ? <Layers size={14} /> : <History size={14} />}
-                   {isGroupingEnabled ? 'Grouped' : 'Flat List'}
-                </button>
-                <div className="w-px h-4 bg-m3-outline/10" />
-                <button 
-                   onClick={toggleSync}
-                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isSyncEnabled ? 'bg-m3-primary/20 text-m3-primary shadow-[0_0_15px_rgba(var(--m3-primary-rgb),0.3)]' : 'bg-m3-surface-variant/40 text-m3-outline'}`}
-                >
-                   {isSyncEnabled ? <Cloud size={14} /> : <CloudOff size={14} />}
-                   {isSyncEnabled ? 'Live Sync' : 'Static'}
-                </button>
-             </div>
-         </div>
-      </header>
+            </div>
+         </header>
+         <footer className="mt-auto p-4 bg-[var(--md-sys-color-surface-variant)]/20 border-t border-[var(--md-sys-color-outline)]/10 shrink-0">
+            <div className="flex items-center justify-between px-3">
+               <div className="flex items-center gap-3">
+                  <FileCheck size={12} className="text-[var(--md-sys-color-primary)]" />
+                  <span className="text-[9px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-widest text-emerald-400">V9 Kernel Secure</span>
+               </div>
+               <div className="text-[8px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-[0.2em]">{sortedStates.length} Blobs Indexed</div>
+            </div>
+         </footer>
+      </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+      <div className="md:col-span-8 lg:col-span-9 flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar bg-[var(--md-sys-color-surface)]/20">
         {isLoading ? (
-          <div className="h-full flex items-center justify-center">
-             <Loader2 size={32} className="text-m3-primary animate-spin" />
-          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex items-center justify-center">
+             <Loader2 size={32} className="text-[var(--md-sys-color-primary)] animate-spin" />
+          </motion.div>
         ) : states.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-             <div className="w-16 h-16 rounded-full border-2 border-dashed border-m3-outline mb-4 flex items-center justify-center">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col items-center justify-center text-center opacity-40">
+             <div className="w-16 h-16 rounded-full border-2 border-dashed border-[var(--md-sys-color-outline)] mb-4 flex items-center justify-center">
                 <ImageIcon size={24} />
              </div>
-             <p className="text-xs font-black uppercase tracking-widest">Empty State Repository</p>
-          </div>
+             <p className="text-xs font-black uppercase tracking-widest text-[var(--md-sys-color-on-surface)]">Empty State Repository</p>
+          </motion.div>
         ) : (
           <AnimatePresence mode="popLayout">
             {sessions.map(({ date, items }) => (
@@ -327,13 +370,13 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                     onClick={() => toggleSession(date)}
                     className="flex items-center gap-3 w-full group"
                   >
-                     <div className="h-px flex-1 bg-m3-outline/10 group-hover:bg-m3-primary/20 transition-colors" />
-                     <div className="flex items-center gap-2 px-4 py-1 rounded-full bg-m3-surface-variant/20 border border-m3-outline/5 transition-all group-hover:border-m3-primary/30">
-                        {sortBy === 'session' ? <Layers size={10} className="text-m3-primary" /> : <History size={10} className="text-m3-outline" />}
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{date}</span>
-                        <ChevronDown size={10} className={`text-m3-outline transition-transform ${expandedSessions[date] ? '' : '-rotate-90'}`} />
+                     <div className="h-px flex-1 bg-[var(--md-sys-color-outline)]/10 group-hover:bg-[var(--md-sys-color-primary)]/20 transition-colors" />
+                     <div className="flex items-center gap-2 px-4 py-1 rounded-3xl bg-[var(--md-sys-color-surface-variant)]/20 border border-[var(--md-sys-color-outline)]/5 transition-all group-hover:border-[var(--md-sys-color-primary)]/30">
+                        {sortBy === 'session' ? <Layers size={10} className="text-[var(--md-sys-color-primary)]" /> : <History size={10} className="text-[var(--md-sys-color-outline)]" />}
+                        <span className="text-[9px] font-black text-[var(--md-sys-color-on-surface)] uppercase tracking-widest">{date}</span>
+                        <ChevronDown size={10} className={`text-[var(--md-sys-color-outline)] transition-transform ${expandedSessions[date] ? '' : '-rotate-90'}`} />
                      </div>
-                     <div className="h-px flex-1 bg-m3-outline/10 group-hover:bg-m3-primary/20 transition-colors" />
+                     <div className="h-px flex-1 bg-[var(--md-sys-color-outline)]/10 group-hover:bg-[var(--md-sys-color-primary)]/20 transition-colors" />
                   </button>
 
                   <AnimatePresence>
@@ -342,7 +385,7 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          className="space-y-4 overflow-hidden"
+                          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-hidden pt-2"
                         >
                            {items.map((state) => (
                               <motion.div 
@@ -353,26 +396,35 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                                 exit={{ opacity: 0, scale: 0.8 }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 400 }}
                                 whileHover={{ 
-                                  scale: 1.03, 
-                                  rotateX: -2, 
-                                  rotateY: 2, 
-                                  translateZ: 10,
+                                  scale: 1.05, 
+                                  rotateX: 5, 
+                                  rotateY: -5, 
+                                  translateZ: 20,
                                   zIndex: 10,
-                                  transition: { duration: 0.1 }
+                                  boxShadow: "0px 20px 40px -10px rgba(var(--md-sys-color-primary-rgb), 0.3)",
+                                  transition: { type: "spring", stiffness: 300, damping: 20 }
                                 }}
-                                className={`group save-state-thumbnail relative rounded-[28px] overflow-hidden border transition-all cursor-pointer preserve-3d ${selectedIds.has(state.id) ? 'border-m3-primary bg-m3-primary/10 shadow-2xl' : state.headerMatch === false ? 'border-amber-500/50 bg-amber-500/5 shadow-lg shadow-amber-500/10' : 'border-m3-outline/10 bg-m3-surface/40 hover:border-m3-primary/50'}`}
+                                className={`group save-state-thumbnail relative rounded-3xl overflow-hidden border transition-all duration-300 cursor-pointer preserve-3d flex flex-col ${selectedIds.has(state.id) ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/10 shadow-lg shadow-[var(--md-sys-color-primary)]/20' : state.headerMatch === false ? 'border-amber-500/50 bg-amber-500/5 shadow-lg shadow-amber-500/10' : 'border-[var(--md-sys-color-outline)]/20 bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)]/50 hover:shadow-lg hover:shadow-[var(--md-sys-color-primary)]/20'}`}
                                 onClick={() => onRestore(state.id)}
                               >
-                                {deleteConfirmId === state.id && (
-                                  <div className="absolute inset-0 z-50 bg-m3-error/90 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center" onClick={e => e.stopPropagation()}>
-                                     <AlertTriangle size={24} className="text-white mb-2" />
-                                     <p className="text-[8px] font-black text-white uppercase tracking-widest mb-3">Confirm Purge?</p>
-                                     <div className="flex gap-2">
-                                        <button onClick={(e) => executeDelete(e, state.id)} className="bg-white text-m3-error px-4 py-1.5 rounded-full text-[8px] font-black uppercase active:scale-95">Yes</button>
-                                        <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="bg-m3-error/20 text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase active:scale-95">No</button>
-                                     </div>
-                                  </div>
-                                )}
+                                <AnimatePresence>
+                                  {deleteConfirmId === state.id && (
+                                    <motion.div 
+                                      initial={{ opacity: 0, scale: 0.9 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.9 }}
+                                      className="absolute inset-0 z-50 bg-[var(--md-sys-color-error)]/95 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center rounded-3xl" 
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                       <AlertTriangle size={24} className="text-white mb-2" />
+                                       <p className="text-[8px] font-black text-white uppercase tracking-widest mb-3">Confirm Purge?</p>
+                                       <div className="flex gap-2">
+                                          <button onClick={(e) => executeDelete(e, state.id)} className="bg-white text-[var(--md-sys-color-error)] px-4 py-1.5 rounded-3xl text-[8px] font-black uppercase active:scale-95 leading-none">Yes</button>
+                                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="bg-[var(--md-sys-color-error)]/20 text-white border border-white/20 px-4 py-1.5 rounded-3xl text-[8px] font-black uppercase active:scale-95 leading-none">No</button>
+                                       </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
 
                                 <div className="aspect-video relative overflow-hidden">
                                   <motion.img 
@@ -384,33 +436,33 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
                                   
                                   {/* Multi-select checkbox */}
-                                  <button onClick={(e) => toggleSelect(e, state.id)} className={`absolute top-4 left-4 p-2 backdrop-blur rounded-xl border transition-all ${selectedIds.has(state.id) ? 'bg-m3-primary border-transparent text-white' : 'bg-black/40 text-m3-outline border-white/5 hover:bg-black/60'}`}>
+                                  <button onClick={(e) => toggleSelect(e, state.id)} className={`absolute top-4 left-4 p-2 backdrop-blur-md rounded-3xl border transition-all ${selectedIds.has(state.id) ? 'bg-[var(--md-sys-color-primary)] border-transparent text-white' : 'bg-black/40 text-[var(--md-sys-color-outline)] border-white/10 hover:bg-black/60'}`}>
                                      {selectedIds.has(state.id) ? <CheckSquare size={16} /> : <Square size={16} />}
                                   </button>
 
-                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-m3-primary/5 backdrop-blur-[1px]">
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--md-sys-color-primary)]/10 backdrop-blur-[1px]">
                                      <PlayCircle size={40} className="text-white drop-shadow-2xl" />
                                   </div>
 
                                   <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
-                                     <button onClick={(e) => toggleDiff(e, state.id)} className={`p-2 rounded-xl backdrop-blur-md border border-white/10 transition-all ${diffViewIds?.includes(state.id) ? 'bg-m3-primary text-white' : 'bg-black/60 text-white hover:bg-m3-primary'}`}>
+                                     <button onClick={(e) => toggleDiff(e, state.id)} className={`p-2 rounded-3xl backdrop-blur-md border border-white/10 transition-all ${diffViewIds?.includes(state.id) ? 'bg-[var(--md-sys-color-primary)] text-white' : 'bg-black/60 text-white hover:bg-[var(--md-sys-color-primary)]'}`}>
                                         <ScanText size={14} />
                                      </button>
-                                     <button onClick={(e) => handleAudit(e, state.id)} className={`p-2 rounded-xl backdrop-blur-md border border-white/10 transition-all ${state.auditStatus === 'MATCH' ? 'bg-emerald-500 text-white' : state.auditStatus === 'ORPHAN' ? 'bg-m3-error text-white' : 'bg-black/40 text-m3-outline'}`}>
+                                     <button onClick={(e) => handleAudit(e, state.id)} className={`p-2 rounded-3xl backdrop-blur-md border border-white/10 transition-all ${state.auditStatus === 'MATCH' ? 'bg-emerald-500 text-white' : state.auditStatus === 'ORPHAN' ? 'bg-[var(--md-sys-color-error)] text-white' : 'bg-black/40 text-[var(--md-sys-color-outline)]'}`}>
                                         {state.auditStatus === 'checking' ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                                      </button>
                                   </div>
                                 </div>
 
-                                <div className="p-4 flex items-center justify-between bg-m3-surface-variant/10">
-                                   <div className="min-w-0 flex-1">
-                                      <h4 className="text-[10px] font-black text-white uppercase truncate">{state.name}</h4>
+                                <div className="p-3 flex items-center justify-between bg-[var(--md-sys-color-surface-variant)]/30 border-t border-[var(--md-sys-color-outline)]/10 flex-1">
+                                   <div className="min-w-0 flex-1 pl-1">
+                                      <h4 className="text-[10px] font-black text-[var(--md-sys-color-on-surface)] uppercase truncate">{state.name}</h4>
                                       <div className="flex items-center gap-2 mt-1">
-                                         <Clock size={8} className="text-m3-outline" />
-                                         <span className="text-[8px] font-black text-m3-outline uppercase tracking-widest">{new Date(state.timestamp).toLocaleTimeString()}</span>
+                                         <Clock size={8} className="text-[var(--md-sys-color-outline)]" />
+                                         <span className="text-[8px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-widest">{new Date(state.timestamp).toLocaleTimeString()}</span>
                                       </div>
                                    </div>
-                                   <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(state.id); }} className="p-2 ml-2 text-m3-outline hover:text-m3-error transition-colors"><Trash2 size={14} /></button>
+                                   <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(state.id); }} className="p-2 ml-2 text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-error)] transition-colors"><Trash2 size={14} /></button>
                                 </div>
                               </motion.div>
                            ))}
@@ -430,31 +482,31 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                initial={{ opacity: 0, y: 100 }}
                animate={{ opacity: 1, y: 0 }}
                exit={{ opacity: 0, y: 100 }}
-               className="absolute inset-x-8 bottom-8 z-[60] h-64 bg-m3-surface-variant/90 backdrop-blur-3xl rounded-[32px] border border-m3-primary/30 shadow-2xl p-6 flex flex-col gap-4 overflow-hidden"
+               className="absolute inset-x-8 bottom-8 z-[60] h-64 bg-[var(--md-sys-color-surface-variant)]/90 backdrop-blur-3xl rounded-3xl border border-[var(--md-sys-color-primary)]/30 shadow-2xl p-6 flex flex-col gap-4 overflow-hidden"
             >
                <div className="flex justify-between items-center px-4">
                   <div className="flex items-center gap-3">
-                     <Sparkles size={16} className="text-m3-primary animate-pulse" />
-                     <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Neural Delta Diff</h4>
+                     <Sparkles size={16} className="text-[var(--md-sys-color-primary)] animate-pulse" />
+                     <h4 className="text-[10px] font-black text-[var(--md-sys-color-on-surface)] uppercase tracking-[0.2em]">Neural Delta Diff</h4>
                   </div>
-                  <button onClick={() => setDiffViewIds(null)} className="p-2 bg-m3-surface/40 rounded-full hover:bg-m3-error/20 hover:text-m3-error transition-all"><X size={16} /></button>
+                  <button onClick={() => setDiffViewIds(null)} className="p-2 bg-[var(--md-sys-color-surface)]/60 rounded-full hover:bg-[var(--md-sys-color-error)]/20 hover:text-[var(--md-sys-color-error)] transition-all"><X size={16} /></button>
                </div>
                <div className="flex-1 flex gap-4">
                   {diffViewIds.map((id, i) => {
                      const state = states.find(s => s.id === id);
                      return (
                         <div key={i} className="flex-1 flex flex-col gap-2">
-                           <div className="flex-1 rounded-[20px] overflow-hidden border border-white/5 shadow-inner relative">
+                           <div className="flex-1 rounded-3xl overflow-hidden border border-white/5 shadow-inner relative">
                               <img src={state?.previewUrl} className="w-full h-full object-cover grayscale-[0.2] contrast-125 transition-all group-hover:scale-105" />
-                              <div className="absolute top-3 left-3 px-2 py-1 bg-black/50 backdrop-blur rounded-lg text-[8px] font-black text-white uppercase">{i === 0 ? 'SNAPSHOT A' : 'SNAPSHOT B'}</div>
+                              <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/50 backdrop-blur rounded-3xl text-[8px] font-black text-white uppercase">{i === 0 ? 'SNAPSHOT A' : 'SNAPSHOT B'}</div>
                            </div>
-                           <p className="text-[9px] font-black text-m3-outline/70 uppercase truncate px-2">{state?.name}</p>
+                           <p className="text-[9px] font-black text-[var(--md-sys-color-outline)]/70 uppercase truncate px-2">{state?.name}</p>
                         </div>
                      );
                   })}
                   {/* Visual Difference Layer */}
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex-1 rounded-[20px] overflow-hidden border border-m3-primary/30 relative bg-black">
+                    <div className="flex-1 rounded-3xl overflow-hidden border border-[var(--md-sys-color-primary)]/30 relative bg-black">
                        <div className="absolute inset-0 flex items-center justify-center">
                           <img 
                             src={states.find(s => s.id === diffViewIds[0])?.previewUrl} 
@@ -465,11 +517,11 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                             className="absolute inset-0 w-full h-full object-cover mix-blend-difference invert brightness-125 contrast-150" 
                           />
                        </div>
-                       <div className="absolute bottom-3 right-3 px-2 py-1 bg-m3-primary/80 backdrop-blur rounded-lg text-[8px] font-black text-white uppercase tracking-widest">
+                       <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-[var(--md-sys-color-primary)]/80 backdrop-blur rounded-3xl text-[8px] font-black text-white uppercase tracking-widest">
                           Delta Map
                        </div>
                     </div>
-                    <p className="text-[9px] font-black text-m3-primary uppercase truncate px-2">Visual Variance Detected</p>
+                    <p className="text-[9px] font-black text-[var(--md-sys-color-primary)] uppercase truncate px-2">Visual Variance Detected</p>
                   </div>
                </div>
             </motion.div>
@@ -483,25 +535,25 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               className="absolute inset-0 z-[100] bg-m3-error/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
+               className="absolute inset-0 z-[100] bg-[var(--md-sys-color-error)]/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center rounded-3xl"
             >
-               <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-6">
+               <div className="w-24 h-24 rounded-full bg-[var(--md-sys-color-surface)]/20 flex items-center justify-center mb-6 border border-white/10">
                   <AlertTriangle size={48} className="text-white animate-bounce" />
                </div>
                <h2 className="text-2xl font-black text-white uppercase tracking-[0.2em] mb-4">Industrial Wipe</h2>
-               <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-8 max-w-sm">
+               <p className="text-white/80 text-xs font-black uppercase tracking-widest mb-8 max-w-sm">
                   You are about to decommission <span className="text-white">{selectedIds.size}</span> selected restore nodes from the Nexus. This action is irreversible.
                </p>
                <div className="flex gap-4">
                   <button 
                      onClick={confirmBatchDelete}
-                     className="bg-white text-m3-error px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center gap-3"
+                     className="bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-error)] px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center gap-3 border border-white/10"
                   >
                      <Check size={18} /> Confirm Purge
                   </button>
                   <button 
                      onClick={() => setBatchDeleteConfirm(false)}
-                     className="bg-m3-error/20 border border-white/20 text-white px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                     className="bg-black/20 border border-white/20 text-white px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
                   >
                      <X size={18} /> Abort Mission
                   </button>
@@ -509,16 +561,6 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
             </motion.div>
          )}
       </AnimatePresence>
-
-      <footer className="p-4 bg-m3-surface-variant/20 border-t border-m3-outline/10 shrink-0">
-         <div className="flex items-center justify-between px-3">
-            <div className="flex items-center gap-3">
-               <FileCheck size={12} className="text-m3-primary" />
-               <span className="text-[9px] font-black text-m3-outline uppercase tracking-widest text-emerald-400">V9 Kernel Secure</span>
-            </div>
-            <div className="text-[8px] font-black text-m3-outline uppercase tracking-[0.2em]">{sortedStates.length} Blobs Indexed</div>
-         </div>
-      </footer>
     </div>
   );
 };

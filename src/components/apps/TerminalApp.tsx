@@ -125,16 +125,20 @@ export const TerminalApp: React.FC = () => {
         return;
     }
 
-    if (cmd === 'scan') {
-        setOutput(prev => [...prev, "Scanning /home/arcade/roms..."]);
+    if (cmd.startsWith('scan')) {
+        const parts = cmd.split(' ');
+        const provider = parts.length > 1 ? parts[1] : 'launchbox';
+        const targetPath = parts.length > 2 ? parts.slice(2).join(' ') : 'C:\\LaunchBox';
+        
+        setOutput(prev => [...prev, `Scanning ${targetPath} using provider [${provider}]...`]);
         try {
             const res = await fetch('/api/scan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lbPath: 'C:\\LaunchBox' })
+                body: JSON.stringify({ provider, targetPath })
             });
             const data = await res.json();
-            setOutput(prev => [...prev, `Scan complete. Found resources.`]);
+            setOutput(prev => [...prev, data.message || `Scan complete. Found resources.`]);
         } catch(err) {
             setOutput(prev => [...prev, "Error scanning: connection failed."]);
         }

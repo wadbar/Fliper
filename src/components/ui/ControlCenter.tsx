@@ -136,7 +136,13 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
              <Battery size={16} className="text-emerald-400" /> Powered by AC
           </div>
           <div className="flex gap-3">
-             <button className="w-10 h-10 rounded-full bg-m3-surface-variant text-m3-outline hover:text-white flex items-center justify-center transition-all">
+             <button 
+                onClick={() => {
+                   const html = document.documentElement;
+                   const isDark = html.dataset.theme === 'dark' || !html.dataset.theme;
+                   html.dataset.theme = isDark ? 'light' : 'dark';
+                }}
+                className="w-10 h-10 rounded-full bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-on-surface)] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]">
                 <Moon size={16} />
              </button>
              <button className="w-10 h-10 rounded-full bg-m3-primary text-m3-on-primary flex items-center justify-center shadow-lg shadow-m3-primary/20 transition-all active:scale-95">
