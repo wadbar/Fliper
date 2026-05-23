@@ -102,12 +102,16 @@
 }
 
 /* M3 Components & Layout Base */
+.m3-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .m3-card {
-  @apply bg-m3-surface-variant/20 border border-m3-outline/20 rounded-[28px] overflow-hidden transition-all duration-300 p-4 gap-4 flex flex-col;
+  @apply bg-m3-surface-variant/20 border border-m3-outline/20 rounded-[28px] overflow-hidden transition-all duration-300 p-6 gap-4 flex flex-col;
 }
 
 .m3-card-elevated {
-  @apply bg-m3-surface-variant/30 shadow-lg border-none rounded-[28px] p-4 gap-4 flex flex-col;
+  @apply bg-m3-surface-variant/30 shadow-lg border-none rounded-[28px] p-6 gap-4 flex flex-col;
 }
 
 .m3-input {
@@ -178,9 +182,5 @@
   body, .container {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
-}
-
-* {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 

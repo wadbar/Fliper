@@ -152,20 +152,22 @@ export const StorageApp: React.FC = () => {
   }, [currentFiles, sortConfig]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] text-zinc-300 font-mono text-[11px] select-text">
+    <div className="flex flex-col h-full bg-m3-surface text-m3-on-surface font-sans text-sm select-text">
       {/* Header Stat Area */}
-      <div className="p-4 bg-zinc-900/50 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-           {tab === 'local' && <HardDrive size={20} className="text-sky-400" />}
-           {tab === 'cloud' && <Cloud size={20} className="text-indigo-400" />}
-           {tab === 'layers' && <Layers size={20} className="text-orange-400" />}
+      <div className="p-6 bg-m3-surface-variant/20 border-b border-m3-outline/10 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+           <div className={`p-3 rounded-2xl flex items-center justify-center ${tab === 'local' ? 'bg-m3-primary-container text-m3-on-primary-container' : tab === 'cloud' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-orange-500/20 text-orange-400'}`}>
+             {tab === 'local' && <HardDrive size={24} />}
+             {tab === 'cloud' && <Cloud size={24} />}
+             {tab === 'layers' && <Layers size={24} />}
+           </div>
            <div>
-              <h3 className="font-bold text-zinc-100 uppercase tracking-tighter">
+              <h3 className="font-bold text-m3-on-surface uppercase tracking-tight text-lg">
                 {tab === 'local' && 'VFS Buffer Node'}
                 {tab === 'cloud' && 'FliperOS Cloud Vault'}
                 {tab === 'layers' && 'Frankenstein Runtime Layers'}
               </h3>
-              <p className="text-[10px] text-zinc-500">
+              <p className="text-xs text-m3-on-surface-variant font-mono">
                 {tab === 'local' && 'Mount: /database | Status: ONLINE'}
                 {tab === 'cloud' && 'Status: CONNECTED | Region: US-EAST'}
                 {tab === 'layers' && 'Isolated Co-existence Modulators: ACTIVE'}
@@ -173,31 +175,31 @@ export const StorageApp: React.FC = () => {
            </div>
         </div>
         <div className="text-right">
-           <p className="text-zinc-400">{(totalSize / 1024 / 1024).toFixed(2)} MB</p>
-           <div className="w-24 h-1 bg-zinc-800 rounded-full mt-1 overflow-hidden">
-              <div className="h-full bg-sky-500" style={{ width: `${Math.min(100, (totalSize / (100 * 1024 * 1024)) * 100)}%` }} />
+           <p className="text-m3-on-surface font-bold text-sm">{(totalSize / 1024 / 1024).toFixed(2)} MB</p>
+           <div className="w-32 h-2 bg-m3-surface-variant rounded-full mt-2 overflow-hidden shadow-inner">
+              <div className="h-full bg-m3-primary transition-all duration-300" style={{ width: `${Math.min(100, (totalSize / (100 * 1024 * 1024)) * 100)}%` }} />
            </div>
         </div>
       </div>
 
       {/* Tab Switcher & Action Bar */}
-      <div className="px-4 py-2 flex items-center justify-between border-b border-zinc-800/50">
-         <div className="flex items-center gap-4">
+      <div className="px-6 py-3 flex items-center justify-between border-b border-m3-outline/10 bg-m3-surface">
+         <div className="flex items-center gap-6">
             <button 
               onClick={() => setTab('local')}
-              className={`pb-1 border-b-2 transition-colors ${tab === 'local' ? 'border-sky-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              className={`pb-2 border-b-2 font-bold tracking-widest text-xs uppercase transition-colors ${tab === 'local' ? 'border-m3-primary text-m3-primary' : 'border-transparent text-m3-on-surface-variant hover:text-m3-on-surface'}`}
             >
               LOCAL
             </button>
             <button 
               onClick={() => setTab('cloud')}
-              className={`pb-1 border-b-2 transition-colors ${tab === 'cloud' ? 'border-indigo-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              className={`pb-2 border-b-2 font-bold tracking-widest text-xs uppercase transition-colors ${tab === 'cloud' ? 'border-m3-primary text-m3-primary' : 'border-transparent text-m3-on-surface-variant hover:text-m3-on-surface'}`}
             >
               CLOUD VAULT
             </button>
             <button 
               onClick={() => setTab('layers')}
-              className={`pb-1 border-b-2 transition-colors ${tab === 'layers' ? 'border-orange-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              className={`pb-2 border-b-2 font-bold tracking-widest text-xs uppercase transition-colors ${tab === 'layers' ? 'border-m3-primary text-m3-primary' : 'border-transparent text-m3-on-surface-variant hover:text-m3-on-surface'}`}
             >
               LAYERS
             </button>
@@ -213,20 +215,20 @@ export const StorageApp: React.FC = () => {
              onKeyDown={(e) => {
                if (e.key === 'Enter') saveSearch(searchQuery);
              }}
-             className="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-[10px] text-zinc-300 focus:outline-none focus:border-sky-500/50 relative z-10"
+             className="m3-input w-64 !py-2 !text-xs !rounded-full relative z-10"
            />
            {showHistory && searchHistory.length > 0 && (
-             <div className="absolute top-full right-8 mt-1 w-48 bg-zinc-900 border border-zinc-800 shadow-2xl rounded-lg overflow-hidden z-50">
-               <div className="flex justify-between items-center px-2 py-1 bg-zinc-800/50">
-                 <span className="text-[9px] text-zinc-500 uppercase">Recent</span>
-                 <button onClick={clearHistory} className="text-[9px] text-rose-400 hover:text-rose-300">Clear</button>
+             <div className="absolute top-full right-8 mt-2 w-64 m3-card !bg-m3-surface-variant !p-0 shadow-2xl overflow-hidden z-50">
+               <div className="flex justify-between items-center px-4 py-2 bg-m3-surface/50">
+                 <span className="text-xs text-m3-on-surface-variant font-bold uppercase">Recent</span>
+                 <button onClick={clearHistory} className="text-xs text-m3-error hover:text-m3-error/80 font-bold">Clear</button>
                </div>
-               <ul>
+               <ul className="py-2">
                  {searchHistory.map((q, i) => (
                    <li key={i}>
                      <button
                        onClick={() => setSearchQuery(q)}
-                       className="w-full text-left px-3 py-1.5 text-[10px] text-zinc-300 hover:bg-zinc-800 transition-colors"
+                       className="w-full text-left px-4 py-2 text-xs text-m3-on-surface hover:bg-m3-surface/30 transition-colors"
                      >
                        {q}
                      </button>
@@ -237,9 +239,9 @@ export const StorageApp: React.FC = () => {
            )}
            <button 
              onClick={refresh}
-             className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-zinc-100"
+             className="p-2 hover:bg-m3-surface-variant rounded-full transition-colors text-m3-on-surface-variant hover:text-m3-on-surface"
            >
-             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
            </button>
          </div>
       </div>
@@ -247,7 +249,7 @@ export const StorageApp: React.FC = () => {
       {/* File List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
          {tab === 'layers' ? (
-             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
                     { id: 'proton', name: 'Proton-GE Runtime', status: 'Active', size: '2.4 GB', desc: 'Windows compatibility via Vulkan' },
                     { id: 'waydroid', name: 'Waydroid Container', status: 'Standby', size: '1.8 GB', desc: 'Android app layer for Linux' },
@@ -256,26 +258,26 @@ export const StorageApp: React.FC = () => {
                     { id: 'steam-link', name: 'Steam Link Engine', status: 'Active', size: '420 MB', desc: 'Cloud streaming bridge' },
                     { id: 'kernel-ai', name: 'Neural Core v1.0', status: 'Optimizing', size: '4.2 GB', desc: 'Ollama + Local Heuristics' }
                 ].map(layer => (
-                    <div key={layer.id} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-4 flex gap-4 items-start group hover:border-orange-500/30 transition-all">
-                        <div className="p-2 bg-orange-500/10 rounded-lg text-orange-400 group-hover:scale-110 transition-transform">
-                            <Box size={20} />
+                    <div key={layer.id} className="m3-card !bg-m3-surface-variant/20 !border-m3-outline/10 flex flex-row gap-4 items-start group hover:!border-m3-primary/30 transition-all cursor-default">
+                        <div className="p-3 bg-m3-primary/10 rounded-2xl text-m3-primary group-hover:scale-110 transition-transform shadow-inner">
+                            <Box size={24} />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-bold text-zinc-200 text-xs">{layer.name}</h4>
-                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${layer.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400' : (layer.status === 'Standby' ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800 text-zinc-500')}`}>
+                                <h4 className="font-bold text-m3-on-surface">{layer.name}</h4>
+                                <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${layer.status === 'Active' ? 'bg-emerald-500/20 text-emerald-500' : (layer.status === 'Standby' ? 'bg-amber-500/20 text-amber-500' : 'bg-m3-surface-variant text-m3-on-surface-variant')}`}>
                                     {layer.status}
                                 </span>
                             </div>
-                            <p className="text-[10px] text-zinc-500 leading-tight mb-2">{layer.desc}</p>
+                            <p className="text-xs text-m3-on-surface-variant leading-tight mb-3 font-mono">{layer.desc}</p>
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] text-zinc-600 font-mono italic">{layer.size}</span>
+                                <span className="text-[10px] text-m3-on-surface-variant font-mono font-bold tracking-widest">{layer.size}</span>
                                 <div className="flex gap-2">
-                                    <button className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors">
-                                        <Cpu size={12} />
+                                    <button className="p-2 bg-m3-surface-variant hover:bg-m3-primary hover:text-m3-on-primary rounded-xl text-m3-on-surface-variant transition-colors">
+                                        <Cpu size={14} />
                                     </button>
-                                    <button className="p-1 hover:bg-rose-500/20 rounded text-zinc-500 hover:text-rose-400 transition-colors">
-                                        <Trash2 size={12} />
+                                    <button className="p-2 bg-m3-surface-variant hover:bg-m3-error hover:text-m3-on-error rounded-xl text-m3-on-surface-variant transition-colors">
+                                        <Trash2 size={14} />
                                     </button>
                                 </div>
                             </div>
@@ -284,82 +286,82 @@ export const StorageApp: React.FC = () => {
                 ))}
              </div>
          ) : loading && currentFiles.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-50">
-               <Loader2 className="animate-spin mb-2" />
-               <span>Scanning blocks...</span>
+            <div className="h-full flex flex-col items-center justify-center opacity-50 text-m3-on-surface-variant">
+               <Loader2 className="animate-spin mb-4" size={32} />
+               <span className="font-bold uppercase tracking-widest text-xs">Scanning blocks...</span>
             </div>
          ) : currentFiles.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-50 italic">
-               <AlertCircle size={20} className="mb-2" />
-               <span>No objects detected.</span>
+            <div className="h-full flex flex-col items-center justify-center opacity-50 text-m3-on-surface-variant">
+               <AlertCircle size={32} className="mb-4" />
+               <span className="font-bold uppercase tracking-widest text-xs">No objects detected.</span>
             </div>
          ) : (
             <table className="w-full text-left">
-               <thead className="sticky top-0 bg-zinc-900 text-zinc-500 border-b border-zinc-800 uppercase text-[9px]">
+               <thead className="sticky top-0 bg-m3-surface-variant/90 backdrop-blur text-m3-on-surface-variant border-b border-m3-outline/20 font-bold uppercase text-xs z-10 shadow-sm">
                   <tr>
-                     <th className="px-4 py-2 font-medium">
-                       <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none">
+                     <th className="px-6 py-4">
+                       <button onClick={() => handleSort('name')} className="flex items-center gap-2 hover:text-m3-primary transition-colors focus:outline-none uppercase tracking-widest font-black">
                          File Name
-                         {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                         {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                        </button>
                      </th>
-                     <th className="px-4 py-2 font-medium">
-                       <button onClick={() => handleSort('type')} className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none">
+                     <th className="px-6 py-4">
+                       <button onClick={() => handleSort('type')} className="flex items-center gap-2 hover:text-m3-primary transition-colors focus:outline-none uppercase tracking-widest font-black">
                          Type
-                         {sortConfig.key === 'type' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                         {sortConfig.key === 'type' && (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                        </button>
                      </th>
-                     <th className="px-4 py-2 font-medium">
-                       <button onClick={() => handleSort('size')} className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none">
+                     <th className="px-6 py-4">
+                       <button onClick={() => handleSort('size')} className="flex items-center gap-2 hover:text-m3-primary transition-colors focus:outline-none uppercase tracking-widest font-black">
                          Size
-                         {sortConfig.key === 'size' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                         {sortConfig.key === 'size' && (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                        </button>
                      </th>
-                     <th className="px-4 py-2 font-medium">Actions</th>
+                     <th className="px-6 py-4 uppercase tracking-widest font-black">Actions</th>
                   </tr>
                </thead>
-               <tbody className="divide-y divide-zinc-900">
+               <tbody className="divide-y divide-m3-outline/10">
                   {sortedFiles.map((file) => (
-                     <tr key={file.name} className="hover:bg-zinc-800/30 group">
-                        <td className="px-4 py-3 flex items-center gap-2">
-                           {file.name.endsWith('.tmp') ? <FileCode size={14} className="text-amber-500" /> : <FileText size={14} className="text-zinc-500" />}
-                           <span className="truncate max-w-[250px]" title={file.name}>{file.name}</span>
+                     <tr key={file.name} className="hover:bg-m3-surface-variant/30 group transition-colors">
+                        <td className="px-6 py-4 flex items-center gap-3">
+                           {file.name.endsWith('.tmp') ? <FileCode size={18} className="text-amber-500" /> : <FileText size={18} className="text-m3-primary" />}
+                           <span className="truncate max-w-[300px] font-medium" title={file.name}>{file.name}</span>
                         </td>
-                        <td className="px-4 py-3 text-zinc-500 uppercase">
+                        <td className="px-6 py-4 text-m3-on-surface-variant uppercase font-bold text-xs tracking-wider">
                            {getFileExtension(file.name) || 'FILE'}
                         </td>
-                        <td className="px-4 py-3 text-zinc-500">
+                        <td className="px-6 py-4 text-m3-on-surface-variant font-mono">
                            {(file.size / 1024).toFixed(1)} KB
                         </td>
-                        <td className="px-4 py-3">
-                           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <td className="px-6 py-4">
+                           <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                              {tab === 'local' && (
                                <button 
                                  onClick={() => syncToCloud(file.name)}
                                  disabled={syncing === file.name}
-                                 className="text-indigo-400 hover:text-indigo-300 p-1"
+                                 className="text-m3-primary hover:text-m3-primary/80 p-2 bg-m3-primary/10 rounded-full transition-colors"
                                  title="Sync to Cloud Vault"
                                >
-                                 {syncing === file.name ? <Loader2 size={12} className="animate-spin" /> : <CloudUpload size={14} />}
+                                 {syncing === file.name ? <Loader2 size={16} className="animate-spin" /> : <CloudUpload size={16} />}
                                </button>
                              )}
                              {tab === 'cloud' && (
                                <button 
                                  onClick={() => getCloudLink(file.name)}
-                                 className="text-sky-400 hover:text-sky-300 p-1" 
+                                 className="text-indigo-400 hover:text-indigo-300 p-2 bg-indigo-400/10 rounded-full transition-colors" 
                                  title="Get Signed URL"
                                >
-                                  <ExternalLink size={14} />
+                                  <ExternalLink size={16} />
                                </button>
                              )}
                              {tab === 'local' && (
                                <button 
                                  onClick={() => deleteLocal(file.name)}
                                  disabled={deleting === file.name}
-                                 className="text-rose-500 hover:text-rose-400 p-1"
+                                 className="text-m3-error hover:text-m3-error/80 p-2 bg-m3-error/10 rounded-full transition-colors"
                                  title="Delete Local Buffer"
                                >
-                                 {deleting === file.name ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={14} />}
+                                 {deleting === file.name ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                </button>
                              )}
                            </div>

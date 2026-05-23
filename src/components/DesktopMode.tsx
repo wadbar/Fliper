@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Game } from '../data/games';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gamepad2, Settings, Terminal, Plus, Download, HardDrive, Cpu, Activity, Clock, ShoppingBag, Loader2, Radio, Trophy } from 'lucide-react';
@@ -26,6 +26,21 @@ import { User } from 'firebase/auth';
 import { ControlCenter } from './ui/ControlCenter';
 import { RetroDashboardWidget } from './ui/RetroDashboardWidget';
 import { SystemResourceWidget } from './ui/SystemResourceWidget';
+
+// Memoize Apps for performance
+const MemoGameManager = React.memo(GameManagerApp);
+const MemoTerminal = React.memo(KernelShellApp);
+const MemoStore = React.memo(DownloaderApp);
+const MemoSettings = React.memo(SettingsApp);
+const MemoMonitor = React.memo(SystemMonitorApp);
+const MemoBios = React.memo(BiosManagerApp);
+const MemoStorage = React.memo(StorageApp);
+const MemoCustomizer = React.memo(CustomizerApp);
+const MemoStream = React.memo(StreamApp);
+const MemoLeaderboards = React.memo(LeaderboardsApp);
+const MemoWiki = React.memo(WikiApp);
+const MemoNeural = React.memo(NeuralCoreApp);
+const MemoNetplay = React.memo(NetplayApp);
 
 function useWindowManager() {
   const [openWindows, setOpenWindows] = useState<string[]>([]);
@@ -149,47 +164,59 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
     };
   }, []);
 
-  // Registry mapped windows to render loop
-  const renderWindow = (id: string) => {
-    const props = {
-      id,
-      isOpen: true,
-      onClose: () => closeWindow(id),
-      onFocus: () => bringToFront(id),
-      isActive: activeWindow === id,
-      zIndex: getZIndex(id)
-    };
+  // Registry mapped windows for deterministic rendering
+  const WINDOW_CONFIG: Record<string, any> = useMemo(() => ({
+    gameManager: { title: t('os_library'), icon: <Gamepad2 />, size: { width: 1200, height: 800 }, component: <MemoGameManager gamesProp={games} onGamesUpdate={onGamesUpdate} onSwitchMode={() => {}} favorites={favorites} toggleFavorite={toggleFavorite} onRecordLaunch={onRecordLaunch} stats={stats} /> },
+    terminal: { title: t('os_terminal'), icon: <Terminal />, size: { width: 800, height: 500 }, component: <MemoTerminal /> },
+    store: { title: t('os_store'), icon: <ShoppingBag />, size: { width: 900, height: 700 }, component: <MemoStore /> },
+    settings: { title: t('os_settings'), icon: <Settings />, size: { width: 800, height: 600 }, component: <MemoSettings /> },
+    monitor: { title: "System Monitor", icon: <Activity />, size: { width: 1000, height: 600 }, component: <MemoMonitor /> },
+    bios: { title: "BIOS Manager", icon: <Shield />, size: { width: 800, height: 600 }, component: <MemoBios /> },
+    storage: { title: "Storage", icon: <HardDrive />, size: { width: 800, height: 600 }, component: <MemoStorage /> },
+    customizer: { title: "OS Factory", icon: <Cpu />, size: { width: 900, height: 700 }, component: <MemoCustomizer /> },
+    stream: { title: "Neural Stream", icon: <Radio />, size: { width: 900, height: 600 }, component: <MemoStream /> },
+    leaderboards: { title: "Hall of Fame", icon: <Trophy />, size: { width: 800, height: 600 }, component: <MemoLeaderboards /> },
+    wiki: { title: "Wiki", icon: <Book />, size: { width: 1000, height: 700 }, component: <MemoWiki /> },
+    neural: { title: "Neural Core", icon: <Brain />, size: { width: 1000, height: 700 }, component: <MemoNeural /> },
+    netplay: { title: "Netplay Grid", icon: <Globe />, size: { width: 900, height: 600 }, component: <MemoNetplay /> },
+  }), [t, games, onGamesUpdate, favorites, toggleFavorite, onRecordLaunch, stats]);
 
-    switch (id) {
-      case 'gameManager':
-        return <OsWindow {...props} title={t('os_library')} icon={<Gamepad2 />} defaultSize={{ width: 1200, height: 800 }}><GameManagerApp gamesProp={games} onGamesUpdate={onGamesUpdate} onSwitchMode={() => {}} favorites={favorites} toggleFavorite={toggleFavorite} onRecordLaunch={onRecordLaunch} stats={stats} /></OsWindow>;
-      case 'terminal':
-        return <OsWindow {...props} title={t('os_terminal')} icon={<Terminal />} defaultSize={{ width: 800, height: 500 }}><KernelShellApp /></OsWindow>;
-      case 'store':
-        return <OsWindow {...props} title={t('os_store')} icon={<ShoppingBag />} defaultSize={{ width: 900, height: 700 }}><DownloaderApp /></OsWindow>;
-      case 'settings':
-        return <OsWindow {...props} title={t('os_settings')} icon={<Settings />} defaultSize={{ width: 800, height: 600 }}><SettingsApp /></OsWindow>;
-      case 'monitor':
-        return <OsWindow {...props} title="System Monitor" icon={<Activity />} defaultSize={{ width: 1000, height: 600 }}><SystemMonitorApp /></OsWindow>;
-      case 'bios':
-        return <OsWindow {...props} title="BIOS Manager" icon={<Shield />} defaultSize={{ width: 800, height: 600 }}><BiosManagerApp /></OsWindow>;
-      case 'storage':
-        return <OsWindow {...props} title="Storage" icon={<HardDrive />} defaultSize={{ width: 800, height: 600 }}><StorageApp /></OsWindow>;
-      case 'customizer':
-        return <OsWindow {...props} title="OS Factory" icon={<Cpu />} defaultSize={{ width: 900, height: 700 }}><CustomizerApp /></OsWindow>;
-      case 'stream':
-        return <OsWindow {...props} title="Neural Stream" icon={<Radio />} defaultSize={{ width: 900, height: 600 }}><StreamApp /></OsWindow>;
-      case 'leaderboards':
-        return <OsWindow {...props} title="Hall of Fame" icon={<Trophy />} defaultSize={{ width: 800, height: 600 }}><LeaderboardsApp /></OsWindow>;
-      case 'wiki':
-        return <OsWindow {...props} title="Wiki" icon={<Book />} defaultSize={{ width: 1000, height: 700 }}><WikiApp /></OsWindow>;
-      case 'neural':
-        return <OsWindow {...props} title="Neural Core" icon={<Brain />} defaultSize={{ width: 1000, height: 700 }}><NeuralCoreApp /></OsWindow>;
-      case 'netplay':
-        return <OsWindow {...props} title="Netplay Grid" icon={<Globe />} defaultSize={{ width: 900, height: 600 }}><NetplayApp /></OsWindow>;
-      default: return null;
-    }
-  };
+  const renderWindow = useCallback((id: string) => {
+    const config = WINDOW_CONFIG[id];
+    if (!config) return null;
+
+    return (
+      <OsWindow
+        key={id}
+        id={id}
+        onClose={() => closeWindow(id)}
+        onFocus={() => bringToFront(id)}
+        isActive={activeWindow === id}
+        zIndex={getZIndex(id)}
+        title={config.title}
+        icon={config.icon}
+        defaultSize={config.size}
+      >
+        {config.component}
+      </OsWindow>
+    );
+  }, [WINDOW_CONFIG, activeWindow, closeWindow, bringToFront, getZIndex]);
+
+  const apps = useMemo(() => [
+    { id: 'gameManager', icon: Gamepad2, label: t('os_library') },
+    { id: 'terminal', icon: Terminal, label: t('os_terminal') },
+    { id: 'store', icon: ShoppingBag, label: t('os_store') },
+    { id: 'monitor', icon: Activity, label: 'Monitor' },
+    { id: 'bios', icon: Shield, label: 'BIOS' },
+    { id: 'storage', icon: HardDrive, label: 'Storage' },
+    { id: 'customizer', icon: Cpu, label: 'OS Factory' },
+    { id: 'stream', icon: Radio, label: 'Stream' },
+    { id: 'netplay', icon: Globe, label: 'Netplay' },
+    { id: 'leaderboards', icon: Trophy, label: 'Hall of Fame' },
+    { id: 'wiki', icon: Book, label: 'Wiki' },
+    { id: 'neural', icon: Brain, label: 'Neural' },
+    { id: 'settings', icon: Settings, label: t('os_settings') },
+  ], [t]);
 
   return (
     <div className="fixed inset-0 bg-[var(--md-sys-color-surface)] font-sans text-[var(--md-sys-color-on-surface)] overflow-hidden flex flex-col relative select-none">
@@ -203,21 +230,7 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
         
         {/* Left App Grid Panel */}
         <div className="md:col-span-8 grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 content-start">
-          {[
-            { id: 'gameManager', icon: Gamepad2, label: t('os_library') },
-            { id: 'terminal', icon: Terminal, label: t('os_terminal') },
-            { id: 'store', icon: ShoppingBag, label: t('os_store') },
-            { id: 'monitor', icon: Activity, label: 'Monitor' },
-            { id: 'bios', icon: Shield, label: 'BIOS' },
-            { id: 'storage', icon: HardDrive, label: 'Storage' },
-            { id: 'customizer', icon: Cpu, label: 'OS Factory' },
-            { id: 'stream', icon: Radio, label: 'Stream' },
-            { id: 'netplay', icon: Globe, label: 'Netplay' },
-            { id: 'leaderboards', icon: Trophy, label: 'Hall of Fame' },
-            { id: 'wiki', icon: Book, label: 'Wiki' },
-            { id: 'neural', icon: Brain, label: 'Neural' },
-            { id: 'settings', icon: Settings, label: t('os_settings') },
-          ].map(app => (
+          {apps.map(app => (
             <motion.button 
               key={app.id}
               whileHover={{ scale: 1.05, y: -2 }}
@@ -304,19 +317,10 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
                 }`}
               >
                 <div className="shrink-0 flex items-center justify-center">
-                  {id === 'gameManager' && <Gamepad2 size={14} />}
-                  {id === 'terminal' && <Terminal size={14} />}
-                  {id === 'store' && <ShoppingBag size={14} />}
-                  {id === 'monitor' && <Activity size={14} />}
-                  {id === 'bios' && <Shield size={14} />}
-                  {id === 'storage' && <HardDrive size={14} />}
-                  {id === 'customizer' && <Cpu size={14} />}
-                  {id === 'stream' && <Radio size={14} />}
-                  {id === 'leaderboards' && <Trophy size={14} />}
-                  {id === 'wiki' && <Book size={14} />}
-                  {id === 'neural' && <Brain size={14} />}
-                  {id === 'settings' && <Settings size={14} />}
-                  {id === 'netplay' && <Globe size={14} />}
+                  {apps.find(a => a.id === id)?.icon 
+                    ? React.createElement(apps.find(a => a.id === id)!.icon, { size: 14 })
+                    : <LayoutGrid size={14} />
+                  }
                 </div>
                 <span className="truncate capitalize">{id}</span>
               </motion.button>
@@ -349,11 +353,7 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
       </div>
       
       {/* Render all open windows */}
-      {openWindows.map(id => (
-         <React.Fragment key={id}>
-           {renderWindow(id)}
-         </React.Fragment>
-      ))}
+      {openWindows.map(id => renderWindow(id))}
 
       {isControlCenterOpen && (
         <ControlCenter 

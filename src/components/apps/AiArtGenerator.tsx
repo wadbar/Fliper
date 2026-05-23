@@ -98,18 +98,18 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
   };
 
   return (
-    <div className={`space-y-4 p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden ${className}`}>
+    <div className={`space-y-4 p-4 m3-card !bg-m3-surface-variant/20 !border-m3-outline/10 ${className || ''}`}>
       <div className="flex items-center justify-between mb-2">
          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-indigo-400" />
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-white italic">AI Illustrator Core</h4>
+            <Sparkles size={16} className="text-m3-primary" />
+            <h4 className="text-[11px] font-black uppercase tracking-widest text-m3-on-surface italic">AI Illustrator Core</h4>
          </div>
          <div className="flex gap-2">
             {['classic', 'modern cinematic', 'retro pixel', 'dark fantasy'].map(s => (
                <button 
                  key={s}
                  onClick={() => setStyle(s)}
-                 className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold transition-all ${style === s ? 'bg-indigo-500 text-white' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'}`}
+                 className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold transition-all ${style === s ? 'bg-m3-primary text-m3-on-primary' : 'bg-transparent text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-variant'}`}
                >
                  {s}
                </button>
@@ -121,16 +121,16 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
         <button
           onClick={generateAIPrompt}
           disabled={isGeneratingPrompt}
-          className="w-full flex items-center justify-center gap-3 py-6 border-2 border-dashed border-zinc-700 hover:border-indigo-500/50 hover:bg-indigo-500/5 rounded-xl transition-all group"
+          className="w-full flex items-center justify-center gap-3 py-6 border-2 border-dashed border-m3-outline/20 hover:border-m3-primary hover:bg-m3-primary/5 rounded-2xl transition-all group m3-surface-variant"
         >
           {isGeneratingPrompt ? (
-            <Loader2 size={24} className="animate-spin text-indigo-400" />
+            <Loader2 size={24} className="animate-spin text-m3-primary" />
           ) : (
             <>
-              <Wand2 size={24} className="text-zinc-600 group-hover:text-indigo-400 group-hover:rotate-12 transition-all" />
+              <Wand2 size={24} className="text-m3-on-surface-variant group-hover:text-m3-primary group-hover:rotate-12 transition-all" />
               <div className="text-left">
-                <p className="text-sm font-black text-white uppercase italic">Initialize Neural Vision</p>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Generate prompt from game metadata</p>
+                <p className="text-sm font-black text-m3-on-surface uppercase italic">Initialize Neural Vision</p>
+                <p className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-tighter">Generate prompt from game metadata</p>
               </div>
             </>
           )}
@@ -147,7 +147,7 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
             <div className="absolute top-2 right-2 flex gap-1">
                <button 
                  onClick={() => setPrompt('')}
-                 className="p-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-md"
+                 className="p-1.5 hover:bg-m3-surface text-m3-on-surface-variant rounded-full transition-colors"
                >
                  <RefreshCw size={14} />
                </button>
@@ -156,17 +156,17 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Refine the visual seeds..."
-              className="w-full bg-[#0C0C0E] border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 font-mono min-h-[100px] focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+              className="m3-input w-full font-mono text-xs min-h-[100px] !bg-m3-surface !border-m3-outline/20"
             />
           </div>
 
           <button
             onClick={generateArt}
             disabled={isGeneratingImage || !prompt}
-            className="w-full h-12 flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+            className="m3-button-filled w-full shadow-md"
           >
             {isGeneratingImage ? (
-              <Loader2 size={18} className="animate-spin" />
+              <Loader2 size={18} className="animate-spin text-m3-on-primary" />
             ) : (
               <>
                 <ImageIcon size={18} /> Visualize Now
@@ -184,26 +184,26 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
             exit={{ opacity: 0, scale: 0.95 }}
             className="space-y-4"
           >
-            <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10 group shadow-2xl">
+            <div className="relative aspect-[3/4] rounded-[24px] overflow-hidden border border-m3-outline/10 group shadow-lg m3-card !p-0">
                <img src={previewUrl} alt="AI Generated" className="w-full h-full object-cover" />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+               <div className="absolute inset-0 bg-gradient-to-t from-m3-surface/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                   <button 
                     onClick={() => setPreviewUrl(null)}
-                    className="w-12 h-12 rounded-full bg-zinc-800/80 hover:bg-red-500 flex items-center justify-center text-white backdrop-blur-md transition-all"
+                    className="w-12 h-12 rounded-full bg-m3-error text-m3-on-error hover:scale-105 active:scale-95 flex items-center justify-center backdrop-blur-md transition-all shadow-md"
                   >
                     <X size={20} />
                   </button>
                   <button 
                     onClick={confirmArt}
-                    className="w-12 h-12 rounded-full bg-emerald-500/80 hover:bg-emerald-500 flex items-center justify-center text-white backdrop-blur-md transition-all"
+                    className="w-12 h-12 rounded-full bg-emerald-500 text-white hover:scale-105 active:scale-95 flex items-center justify-center backdrop-blur-md transition-all shadow-md"
                   >
                     <Check size={20} />
                   </button>
                </div>
                
                {isGeneratingImage && (
-                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                    <Loader2 size={32} className="animate-spin text-indigo-400" />
+                 <div className="absolute inset-0 bg-m3-surface/60 backdrop-blur-sm flex items-center justify-center">
+                    <Loader2 size={32} className="animate-spin text-m3-primary" />
                  </div>
                )}
             </div>
@@ -212,13 +212,13 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
                <button 
                  onClick={generateArt}
                  disabled={isGeneratingImage}
-                 className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 h-10 rounded-lg text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                 className="m3-button-tonal flex-1 !text-xs !py-2 !rounded-xl"
                >
                  <RefreshCw size={14} className={isGeneratingImage ? 'animate-spin' : ''} /> Regenerate
                </button>
                <button 
                  onClick={confirmArt}
-                 className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white h-10 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-indigo-500/20"
+                 className="m3-button-filled flex-1 !text-xs !py-2 !rounded-xl"
                >
                  <Check size={14} /> Accept Art
                </button>
@@ -228,7 +228,7 @@ export const AiArtGenerator: React.FC<AiArtGeneratorProps> = ({ gameTitle, genre
       </AnimatePresence>
 
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-400">
+        <div className="p-3 bg-m3-error-container/20 border border-m3-error/20 rounded-xl flex items-center gap-3 text-m3-error">
            <X size={14} />
            <p className="text-[10px] font-bold uppercase tracking-tight">{error}</p>
         </div>

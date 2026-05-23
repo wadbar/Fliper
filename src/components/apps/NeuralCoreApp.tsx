@@ -55,7 +55,7 @@ export const NeuralCoreApp: React.FC = () => {
                         <Brain size={32} className="text-m3-on-primary" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black text-white tracking-widest uppercase italic">Neural Core</h1>
+                        <h1 className="text-3xl font-black text-m3-on-surface tracking-widest uppercase italic">Neural Core</h1>
                         <div className="flex items-center gap-3">
                            <div className="w-2 h-2 rounded-full bg-m3-primary animate-pulse" />
                            <p className="text-[10px] font-black text-m3-primary uppercase tracking-[0.2em]">Distributed Inference Engine</p>
@@ -64,14 +64,14 @@ export const NeuralCoreApp: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                   <div className="m3-card bg-m3-surface-variant/30 px-6 py-2 border-m3-outline/20">
-                      <p className="text-[9px] font-black text-m3-outline uppercase tracking-widest text-center">Avg Latency</p>
-                      <p className="text-xl font-black text-white text-center">482ms</p>
+                   <div className="m3-card !bg-m3-surface-variant/30 !px-6 !py-2 !border-m3-outline/20 flex flex-col items-center">
+                      <p className="text-[9px] font-black text-m3-on-surface-variant uppercase tracking-widest text-center">Avg Latency</p>
+                      <p className="text-xl font-black text-m3-on-surface text-center">482ms</p>
                    </div>
-                   <button className="m3-button-tonal p-4 rounded-full">
+                   <button className="m3-button-tonal p-4 rounded-full shadow-sm flex items-center justify-center">
                       <RefreshCw size={20} />
                    </button>
-                   <button className="m3-button-filled p-4 rounded-full shadow-lg shadow-m3-primary/20">
+                   <button className="m3-button-filled p-4 rounded-full shadow-lg shadow-m3-primary/20 flex items-center justify-center">
                       <Settings size={20} />
                    </button>
                 </div>
@@ -82,26 +82,26 @@ export const NeuralCoreApp: React.FC = () => {
                     
                     {/* Left Rail: Node Status */}
                     <div className="xl:col-span-1 space-y-8">
-                       <h3 className="text-xs font-black text-m3-outline uppercase tracking-[0.3em] px-2 flex items-center gap-3">
-                          <Activity size={14} /> Propagation Stack
+                       <h3 className="text-xs font-black text-m3-on-surface-variant uppercase tracking-[0.3em] px-2 flex items-center gap-3">
+                          <Activity size={14} className="text-m3-primary" /> Propagation Stack
                        </h3>
                        
                        {[
-                         { id: 'ollama', name: 'Edge Node 01', provider: 'Ollama', status: 'Optimal', color: 'text-emerald-400' },
+                         { id: 'ollama', name: 'Edge Node 01', provider: 'Ollama', status: 'Optimal', color: 'text-emerald-500' },
                          { id: 'gemini', name: 'Cloud Node 05', provider: 'Gemini', status: 'Stable', color: 'text-m3-primary' },
-                         { id: 'nvidia', name: 'Final Wall', provider: 'Nvidia', status: 'Halt', color: 'text-rose-500' }
+                         { id: 'nvidia', name: 'Final Wall', provider: 'Nvidia', status: 'Halt', color: 'text-m3-error' }
                        ].map(node => (
-                         <div key={node.id} className="m3-card p-6 bg-m3-surface-variant/5 border-m3-outline/5 hover:border-m3-primary/20 transition-all cursor-pointer group">
+                         <div key={node.id} className="m3-card !p-6 !bg-m3-surface-variant/5 !border-m3-outline/5 hover:!border-m3-primary/20 transition-all cursor-pointer group">
                             <div className="flex items-center justify-between mb-4">
                                <span className={`text-[10px] font-black uppercase italic ${node.color}`}>{node.provider}</span>
                                <div className="flex gap-1">
                                   {[1,2,3].map(i => <div key={i} className={`w-1 h-3 rounded-full ${node.status === 'Halt' ? 'bg-m3-error/30' : 'bg-m3-primary/30'} ${node.status !== 'Halt' ? 'animate-bounce' : ''}`} style={{ animationDelay: `${i*0.2}s` }} />)}
                                </div>
                             </div>
-                            <h4 className="text-xl font-black text-white tracking-tighter uppercase mb-1">{node.name}</h4>
+                            <h4 className="text-xl font-black text-m3-on-surface tracking-tighter uppercase mb-1">{node.name}</h4>
                             <div className="flex items-center justify-between">
-                               <p className="text-[10px] font-black text-m3-outline uppercase tracking-widest">{node.status === 'Halt' ? 'Node Isolated' : 'Data Streaming'}</p>
-                               <span className="text-[10px] font-black text-white opacity-50 italic">12ms</span>
+                               <p className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest">{node.status === 'Halt' ? 'Node Isolated' : 'Data Streaming'}</p>
+                               <span className="text-[10px] font-black text-m3-on-surface-variant opacity-50 italic">12ms</span>
                             </div>
                          </div>
                        ))}
@@ -109,7 +109,7 @@ export const NeuralCoreApp: React.FC = () => {
 
                     {/* Center Context: Synthesizer */}
                     <div className="xl:col-span-3 space-y-10">
-                       <div className="m3-card p-10 bg-m3-surface-variant/10 relative overflow-hidden">
+                       <div className="m3-card !p-10 !bg-m3-surface-variant/10 relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-96 h-96 bg-m3-primary/5 blur-[100px] -translate-y-1/2 translate-x-1/2" />
                           
                           <div className="flex items-center gap-6 mb-10">
@@ -117,7 +117,7 @@ export const NeuralCoreApp: React.FC = () => {
                                 <Zap size={32} />
                              </div>
                              <div>
-                                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Visual Ingestor</h2>
+                                <h2 className="text-4xl font-black text-m3-on-surface tracking-tighter uppercase">Visual Ingestor</h2>
                                 <p className="text-m3-on-surface-variant font-medium text-lg italic">Convert high-entropy thoughts into production vectors.</p>
                              </div>
                           </div>
@@ -125,12 +125,12 @@ export const NeuralCoreApp: React.FC = () => {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                              <div className="space-y-6">
                                 <div className="space-y-4">
-                                   <label className="text-[10px] font-black text-m3-outline uppercase tracking-[0.3em] px-4">Inference Prompt</label>
+                                   <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-[0.3em] px-4">Inference Prompt</label>
                                    <textarea 
                                       value={prompt}
                                       onChange={(e) => setPrompt(e.target.value)}
                                       placeholder="Ex: Cyberpunk cityscape, rainy night, neon refraction..."
-                                      className="w-full h-48 bg-m3-surface-variant/40 rounded-[32px] p-8 text-lg font-black text-white italic outline-none border border-m3-outline/10 focus:border-m3-primary/50 transition-all resize-none no-scrollbar"
+                                      className="m3-input w-full h-48 !bg-m3-surface-variant/40 !rounded-[32px] !p-8 text-lg font-black text-m3-on-surface italic outline-none border border-m3-outline/10 focus:border-m3-primary/50 transition-all resize-none no-scrollbar"
                                    />
                                 </div>
                                 
@@ -143,13 +143,13 @@ export const NeuralCoreApp: React.FC = () => {
                                       {generating ? <RefreshCw size={24} className="animate-spin" /> : <Zap size={24} className="group-hover:scale-125 transition-transform" />}
                                       <span className="text-lg font-black uppercase italic tracking-tighter">{generating ? 'Synthesizing...' : 'Ignite Engine'}</span>
                                    </button>
-                                   <button className="m3-button-tonal p-6 rounded-full">
+                                   <button className="m3-button-tonal p-6 rounded-full flex items-center justify-center">
                                       <Trash2 size={24} />
                                    </button>
                                 </div>
                              </div>
 
-                             <div className="relative aspect-square m3-card bg-m3-surface-variant/20 border-dashed border-m3-outline/20 flex items-center justify-center overflow-hidden">
+                             <div className="relative aspect-square m3-card !bg-m3-surface-variant/20 !border-dashed !border-m3-outline/20 flex items-center justify-center overflow-hidden">
                                 <AnimatePresence mode="wait">
                                    {generatedImageUrl ? (
                                      <motion.img 
@@ -166,10 +166,10 @@ export const NeuralCoreApp: React.FC = () => {
                                        animate={{ opacity: 1 }}
                                        className="text-center space-y-4"
                                      >
-                                        <div className="w-20 h-20 rounded-full bg-m3-surface-variant/30 flex items-center justify-center mx-auto mb-4 border border-m3-outline/10">
-                                           <Search size={32} className="text-m3-outline opacity-50" />
-                                        </div>
-                                        <p className="text-sm font-black text-m3-outline uppercase tracking-widest italic">Awaiting Genetic Seed</p>
+                                         <div className="w-20 h-20 rounded-full bg-m3-surface-variant/30 flex items-center justify-center mx-auto mb-4 border border-m3-outline/10">
+                                            <Search size={32} className="text-m3-on-surface-variant opacity-50" />
+                                         </div>
+                                         <p className="text-sm font-black text-m3-on-surface-variant uppercase tracking-widest italic">Awaiting Genetic Seed</p>
                                      </motion.div>
                                    )}
                                 </AnimatePresence>
@@ -187,8 +187,8 @@ export const NeuralCoreApp: React.FC = () => {
 
                                 {generatedImageUrl && (
                                    <div className="absolute bottom-6 right-6 flex gap-3">
-                                      <button className="m3-button-tonal p-3 rounded-xl bg-black/50 backdrop-blur text-white hover:bg-m3-primary hover:text-m3-on-primary"><Download size={20} /></button>
-                                      <button className="m3-button-tonal p-3 rounded-xl bg-black/50 backdrop-blur text-white hover:bg-m3-primary hover:text-m3-on-primary"><Share2 size={20} /></button>
+                                      <button className="m3-button-tonal !p-3 !rounded-xl !bg-black/50 backdrop-blur !text-m3-on-surface hover:!bg-m3-primary hover:!text-m3-on-primary flex items-center justify-center"><Download size={20} /></button>
+                                      <button className="m3-button-tonal !p-3 !rounded-xl !bg-black/50 backdrop-blur !text-m3-on-surface hover:!bg-m3-primary hover:!text-m3-on-primary flex items-center justify-center"><Share2 size={20} /></button>
                                    </div>
                                 )}
                              </div>
@@ -196,15 +196,15 @@ export const NeuralCoreApp: React.FC = () => {
                        </div>
 
                        {/* History / Logs Section */}
-                       <div className="m3-card p-8 bg-m3-surface-variant/5">
-                          <h3 className="text-xs font-black text-m3-outline uppercase tracking-[0.3em] mb-8 px-2">Neural Link Feed</h3>
-                          <div className="m3-card bg-m3-surface-variant/20 p-6 font-mono text-xs text-white/50 space-y-4 h-64 overflow-y-auto no-scrollbar border-m3-outline/5 italic">
-                             <p><span className="text-m3-primary mr-3 opacity-100">[0.00ms]</span> Establishing high-entropy tunnel...</p>
-                             <p><span className="text-m3-primary mr-3 opacity-100">[1.42ms]</span> V9 Core Handshake: COMPLETED</p>
-                             <p><span className="text-emerald-400 mr-3 opacity-100">[SUCCESS]</span> Propagation through Edge Node 01 verified.</p>
-                             <p><span className="text-m3-outline mr-3">[TRACE]</span> Loading visual grammar for stable-diffusion-v4-hybrid...</p>
-                             <p><span className="text-m3-primary mr-3 opacity-100">[HEARTBEAT]</span> Node health checking: 99.8% stability index.</p>
-                             <p><span className="text-m3-error mr-3 opacity-100">[HALT]</span> Nvidia context dropped. Retrying via heuristic layer.</p>
+                       <div className="m3-card !p-8 !bg-m3-surface-variant/5">
+                          <h3 className="text-xs font-black text-m3-on-surface-variant uppercase tracking-[0.3em] mb-8 px-2">Neural Link Feed</h3>
+                          <div className="m3-card !bg-m3-surface-variant/20 !p-6 font-mono text-xs text-m3-on-surface-variant space-y-4 h-64 overflow-y-auto no-scrollbar border-m3-outline/5 italic">
+                             <p><span className="text-m3-primary mr-3 opacity-100 font-bold">[0.00ms]</span> Establishing high-entropy tunnel...</p>
+                             <p><span className="text-m3-primary mr-3 opacity-100 font-bold">[1.42ms]</span> V9 Core Handshake: COMPLETED</p>
+                             <p><span className="text-emerald-500 mr-3 opacity-100 font-bold">[SUCCESS]</span> Propagation through Edge Node 01 verified.</p>
+                             <p><span className="text-m3-on-surface-variant mr-3">[TRACE]</span> Loading visual grammar for stable-diffusion-v4-hybrid...</p>
+                             <p><span className="text-m3-primary mr-3 opacity-100 font-bold">[HEARTBEAT]</span> Node health checking: 99.8% stability index.</p>
+                             <p><span className="text-m3-error mr-3 opacity-100 font-bold">[HALT]</span> Nvidia context dropped. Retrying via heuristic layer.</p>
                           </div>
                        </div>
                     </div>

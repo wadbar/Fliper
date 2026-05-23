@@ -149,7 +149,7 @@ export const TerminalApp: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e1e] font-mono text-xs text-zinc-300 p-2 overflow-hidden">
+    <div className="flex flex-col h-full bg-m3-surface text-m3-on-surface font-mono text-xs p-2 overflow-hidden selection:bg-m3-primary/30">
       <div className="flex-1 overflow-y-auto whitespace-pre-wrap">
         {output.map((line, i) => (
           <div key={i} className="min-h-[1.2em]">{line}</div>
@@ -157,12 +157,12 @@ export const TerminalApp: React.FC = () => {
         <div ref={endRef} />
       </div>
       <form onSubmit={handleCommand} className="flex mt-2">
-        <span className="text-emerald-400 mr-2">arcade@fliperos:~$</span>
+        <span className="text-m3-primary mr-2 font-bold">arcade@fliperos:~$</span>
         <input 
           type="text" 
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 bg-transparent outline-none text-zinc-300 focus:ring-0 select-text"
+          className="flex-1 bg-transparent outline-none text-m3-on-surface focus:ring-0 select-text"
           autoFocus
           spellCheck={false}
         />

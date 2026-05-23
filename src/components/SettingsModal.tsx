@@ -47,7 +47,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                <Settings size={24} className="text-m3-on-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-white tracking-widest uppercase">System</h1>
+              <h1 className="text-xl font-black text-m3-on-surface tracking-widest uppercase">System</h1>
               <p className="text-[10px] font-black text-m3-primary tracking-[0.2em] uppercase">V9 Console</p>
             </div>
           </div>
@@ -55,10 +55,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
 
         <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-2 no-scrollbar">
           {[
-            { id: 'performance', label: 'Performance', icon: Cpu, color: 'text-emerald-400' },
+            { id: 'performance', label: 'Performance', icon: Cpu, color: 'text-emerald-500' },
             { id: 'emulators', label: 'Emulators', icon: Gamepad2, color: 'text-m3-primary' },
-            { id: 'video', label: 'Visual Engine', icon: Monitor, color: 'text-amber-400' },
-            { id: 'input', label: 'Input Subsystem', icon: Zap, color: 'text-cyan-400' },
+            { id: 'video', label: 'Visual Engine', icon: Monitor, color: 'text-amber-500' },
+            { id: 'input', label: 'Input Subsystem', icon: Zap, color: 'text-cyan-500' },
             { id: 'paths', label: 'Storage Nodes', icon: FolderOpen, color: 'text-m3-tertiary' },
           ].map((tab) => (
             <button 
@@ -70,7 +70,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 <tab.icon size={20} className={tab.color} />
                 <span className="text-sm font-black tracking-tight uppercase">{tab.label}</span>
               </div>
-              {activeTab === tab.id && <ChevronRight size={16} className="text-white" />}
+              {activeTab === tab.id && <ChevronRight size={16} className="text-m3-on-surface" />}
             </button>
           ))}
         </div>
@@ -104,9 +104,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                          <button 
                            key={l.id} 
                            onClick={() => setLanguage(l.id as any)}
-                           className={`p-5 rounded-[24px] border transition-all text-left flex items-center justify-between ${language === l.id ? 'border-m3-primary bg-m3-primary/10' : 'border-m3-outline/10 hover:bg-m3-surface-variant/20'}`}
+                           className={`m3-card !rounded-[24px] !p-5 transition-all text-left flex items-center justify-between ${language === l.id ? '!border-m3-primary !bg-m3-primary/10' : '!border-m3-outline/10 hover:!bg-m3-surface-variant/40'}`}
                          >
-                            <span className="text-sm font-black uppercase tracking-tight text-white">{l.label}</span>
+                            <span className="text-sm font-black uppercase tracking-tight text-m3-on-surface">{l.label}</span>
                             <span className="text-xl">{l.flag}</span>
                          </button>
                        ))}
@@ -123,13 +123,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                          <button 
                             key={mode.id}
                             onClick={() => setPerfMode(mode.id)}
-                            className={`w-full p-6 text-left rounded-[32px] border transition-all relative overflow-hidden ${perfMode === mode.id ? 'border-m3-primary bg-m3-primary/5' : 'border-m3-outline/10 hover:bg-m3-surface-variant/20'}`}
+                            className={`m3-card w-full !p-6 text-left !rounded-[32px] transition-all relative overflow-hidden ${perfMode === mode.id ? '!border-m3-primary !bg-m3-primary/5' : '!border-m3-outline/10 hover:!bg-m3-surface-variant/40'}`}
                          >
                             <div className="flex items-center gap-4">
                                <div className={`w-3 h-3 rounded-full ${mode.color}`} />
                                <div>
-                                  <p className="text-lg font-black text-white uppercase tracking-tighter">{mode.label}</p>
-                                  <p className="text-[10px] font-black text-m3-outline uppercase tracking-widest mt-1">{mode.desc}</p>
+                                  <p className="text-lg font-black text-m3-on-surface uppercase tracking-tighter">{mode.label}</p>
+                                  <p className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest mt-1">{mode.desc}</p>
                                </div>
                             </div>
                          </button>
@@ -137,11 +137,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                     </div>
                  </section>
 
-                 <section className="p-8 rounded-[32px] bg-m3-surface-variant/10 border border-m3-outline/10 flex items-center gap-6">
+                 <section className="m3-card !p-8 !rounded-[32px] !bg-m3-surface-variant/20 !border-m3-outline/10 flex items-center gap-6">
                     <RefreshCcw size={32} className="text-m3-primary animate-spin" />
                     <div>
-                       <p className="text-sm font-black text-white uppercase">Neural Auto-Tuning Active</p>
-                       <p className="text-[10px] font-black text-m3-outline uppercase tracking-widest mt-1">Adjusting thermal envelopes in real-time</p>
+                       <p className="text-sm font-black text-m3-on-surface uppercase">Neural Auto-Tuning Active</p>
+                       <p className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-widest mt-1">Adjusting thermal envelopes in real-time</p>
                     </div>
                  </section>
               </>
@@ -150,7 +150,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             {activeTab === 'emulators' && (
                <div className="space-y-10">
                   <header>
-                     <h3 className="text-4xl font-black text-white tracking-tighter uppercase mb-4">Core Mapping</h3>
+                     <h3 className="text-4xl font-black text-m3-on-surface tracking-tighter uppercase mb-4">Core Mapping</h3>
                      <p className="text-m3-on-surface-variant font-medium text-lg leading-relaxed">Bind specific hardware nodes to production-grade emulator binary branches.</p>
                   </header>
 
@@ -162,8 +162,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                        { id: 'snes', label: 'Super Nintendo', options: ['Snes9x', 'bsnes', 'Mesen-S'] }
                      ].map(sys => (
                         <div key={sys.id} className="space-y-3">
-                           <label className="text-[10px] font-black text-m3-outline uppercase tracking-[0.2em] px-4">{sys.label}</label>
-                           <select className="w-full bg-m3-surface-variant/40 rounded-[20px] px-6 py-4 text-sm font-black text-white outline-none ring-2 ring-transparent focus:ring-m3-primary/30 appearance-none border border-m3-outline/10">
+                           <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-[0.2em] px-4">{sys.label}</label>
+                           <select className="m3-input w-full !bg-m3-surface-variant/40 !border-m3-outline/10 !rounded-[20px] !px-6 !py-4 text-sm font-black text-m3-on-surface outline-none ring-2 ring-transparent focus:ring-m3-primary/30 appearance-none">
                               {sys.options.map(opt => <option key={opt}>{opt}</option>)}
                            </select>
                         </div>
@@ -175,27 +175,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             {activeTab === 'paths' && (
                <div className="space-y-10">
                   <header>
-                     <h3 className="text-4xl font-black text-white tracking-tighter uppercase mb-4">Storage Matrix</h3>
+                     <h3 className="text-4xl font-black text-m3-on-surface tracking-tighter uppercase mb-4">Storage Matrix</h3>
                      <p className="text-m3-on-surface-variant font-medium text-lg leading-relaxed">Mount external hardware volumes and configure library ingestion paths.</p>
                   </header>
 
                   <div className="space-y-8">
                      <div className="space-y-4">
-                        <label className="text-[10px] font-black text-m3-outline uppercase tracking-[0.2em] px-4">Primary Ingestion Path</label>
+                        <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-[0.2em] px-4">Primary Ingestion Path</label>
                         <div className="flex gap-4">
                            <input 
                               type="text" 
                               value={lbPath}
                               onChange={(e) => setLbPath(e.target.value)}
-                              className="flex-1 bg-m3-surface-variant/40 rounded-full px-8 py-5 text-sm font-black text-white outline-none border border-m3-outline/10"
+                              className="m3-input flex-1 !bg-m3-surface-variant/40 !rounded-full !px-8 !py-5 text-sm font-black"
                            />
                            <button className="m3-button-tonal px-8 rounded-full">Explore</button>
                         </div>
                      </div>
 
                      <div className="space-y-4 opacity-50 grayscale pointer-events-none">
-                        <label className="text-[10px] font-black text-m3-outline uppercase tracking-[0.2em] px-4">Kernel Storage Target (/roms)</label>
-                        <div className="p-6 rounded-[24px] bg-m3-surface-variant/10 border border-m3-outline/10 font-black text-white flex items-center justify-between">
+                        <label className="text-[10px] font-black text-m3-on-surface-variant uppercase tracking-[0.2em] px-4">Kernel Storage Target (/roms)</label>
+                        <div className="m3-card !p-6 !rounded-[24px] !bg-m3-surface-variant/10 !border-m3-outline/10 font-black text-m3-on-surface flex items-center justify-between">
                            <span>MAPPED: /mnt/storage/internal</span>
                            <Globe size={20} className="text-m3-primary" />
                         </div>
