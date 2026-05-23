@@ -103,19 +103,23 @@
 
 /* M3 Components & Layout Base */
 .m3-card {
-  @apply bg-m3-surface-variant/20 border border-m3-outline/20 rounded-[28px] overflow-hidden transition-all duration-300;
+  @apply bg-m3-surface-variant/20 border border-m3-outline/20 rounded-[28px] overflow-hidden transition-all duration-300 p-4 gap-4 flex flex-col;
 }
 
 .m3-card-elevated {
-  @apply bg-m3-surface-variant/30 shadow-lg border-none rounded-[28px];
+  @apply bg-m3-surface-variant/30 shadow-lg border-none rounded-[28px] p-4 gap-4 flex flex-col;
+}
+
+.m3-input {
+  @apply bg-m3-surface-variant/20 border border-m3-outline/20 rounded-2xl px-4 py-3 text-sm text-m3-on-surface focus:ring-2 focus:ring-m3-primary/50 focus:outline-none transition-all;
 }
 
 .m3-button-filled {
-  @apply bg-m3-primary text-m3-on-primary px-6 py-3 rounded-full font-bold transition-all active:scale-95 flex items-center justify-center gap-2;
+  @apply bg-m3-primary text-m3-on-primary px-6 py-3 rounded-full font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border-none outline-none;
 }
 
 .m3-button-tonal {
-  @apply bg-m3-secondary-container text-m3-on-secondary-container px-6 py-3 rounded-full font-bold transition-all active:scale-95 flex items-center justify-center gap-2;
+  @apply bg-m3-secondary-container text-m3-on-secondary-container px-6 py-3 rounded-full font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border-none outline-none;
 }
 
 /* KERNEL ATMOSPHERE */

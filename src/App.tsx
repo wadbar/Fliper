@@ -54,6 +54,13 @@ export default function App() {
   useGamepad(handleGamepadAction);
 
   useEffect(() => {
+    // Theme Initializer
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    document.documentElement.dataset.theme = initialTheme;
+    // ---
+    
     const handleGlobalClick = () => {
       audioEngine.play('click');
     };

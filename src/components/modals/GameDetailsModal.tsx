@@ -4,6 +4,7 @@ import { X, Play, Clock, Trophy, Award, Calendar, User, Tag, Sparkles, Cpu, Zap,
 import { Game } from '../../data/games';
 import { AiArtGenerator } from '../apps/AiArtGenerator';
 import { ThreeDGameCartridge } from '../ui/ThreeDGameCartridge';
+import { EmulatorShaderManager } from '../ui/EmulatorShaderManager';
 
 interface GameDetailsModalProps {
   game: Game | null;
@@ -471,31 +472,11 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                       exit={{ opacity: 0, scale: 0.95 }}
                       className="space-y-6"
                     >
-                       <div className="flex flex-col space-y-4">
-                          <label className="text-[11px] font-black text-m3-outline uppercase tracking-[0.2em] pl-1">Global Post-Processing</label>
-                          <select 
-                            value={selectedShader}
-                            onChange={(e) => setSelectedShader(e.target.value)}
-                            className="w-full bg-m3-surface-variant/30 border border-m3-outline/20 rounded-[20px] p-5 text-white font-bold appearance-none cursor-pointer hover:bg-m3-surface-variant/50 transition-all outline-none"
-                          >
-                             <option value="crt-royale">CRT-Royale (Elite Aesthetic)</option>
-                             <option value="pixel-perfect">PixelPerfect (Sharp Integer Scaling)</option>
-                             <option value="ntsc-u">NTSC-u (Soft Composite Blurring)</option>
-                             <option value="zfast">Performance (Lite Mode Optimization)</option>
-                             <option value="hlsl">MAME Native HLSL (RTX Optimized)</option>
-                          </select>
-
-                          <div className="p-6 bg-m3-primary-container/20 border border-m3-primary/10 rounded-[28px]">
-                             <h4 className="text-xs font-black text-m3-primary uppercase mb-3">Kernel Pipeline Description</h4>
-                             <p className="text-sm text-m3-on-surface-variant leading-relaxed">
-                                {selectedShader === 'crt-royale' && 'Simulates aperture grille phosphors and scanline blooming for an authentic 90s arcade feel. High GPU required.'}
-                                {selectedShader === 'pixel-perfect' && 'Maintains strict integer scaling with no interpolation. Perfect for high-resolution 4K displays.'}
-                                {selectedShader === 'ntsc-u' && 'Replicates the color bleeding and soft artifacting of North American analog TV signals. CRT simulation.'}
-                                {selectedShader === 'zfast' && 'Optimized for mobile and integrated graphics. Essential scanlines without frame parity loss.'}
-                                {selectedShader === 'hlsl' && 'The industry standard for MAME emulation. Calibrated for HDR and sub-pixel accuracy.'}
-                              </p>
-                          </div>
-                       </div>
+                       <EmulatorShaderManager 
+                         currentShader={selectedShader} 
+                         onShaderChange={setSelectedShader} 
+                         previewImage={game?.fanArt || game?.coverArt || ''} 
+                       />
                     </motion.div>
                   ) : (
                     <div className="py-20 flex items-center justify-center text-m3-outline uppercase font-black tracking-widest text-xs opacity-50">

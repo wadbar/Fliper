@@ -152,6 +152,7 @@ export const DesktopMode: React.FC<DesktopModeProps> = ({
   // Registry mapped windows to render loop
   const renderWindow = (id: string) => {
     const props = {
+      id,
       isOpen: true,
       onClose: () => closeWindow(id),
       onFocus: () => bringToFront(id),

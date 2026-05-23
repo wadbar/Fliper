@@ -248,8 +248,8 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 max-w-7xl mx-auto h-full w-full bg-[var(--md-sys-color-surface-container)] backdrop-blur-2xl rounded-3xl border border-[var(--md-sys-color-outline)]/20 overflow-hidden relative">
-      <div className="md:col-span-4 lg:col-span-3 flex flex-col border-b md:border-b-0 md:border-r border-[var(--md-sys-color-outline)]/10 bg-[var(--md-sys-color-surface)]/50 shrink-0">
+    <div className="m3-card grid grid-cols-1 md:grid-cols-12 gap-4 max-w-7xl mx-auto h-full w-full relative">
+      <div className="md:col-span-4 lg:col-span-3 flex flex-col border-r border-m3-outline/10 bg-m3-surface/50 rounded-2xl overflow-hidden shrink-0">
          <header className="p-6 space-y-4">
             <div className="flex items-center justify-between">
                <div className="flex items-center gap-3">
@@ -279,7 +279,7 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                   <button 
                     onClick={handleCapture}
                     disabled={isCapturing}
-                    className="flex items-center justify-center bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-full px-6 py-2 text-[10px] font-black uppercase tracking-widest gap-2 hover:opacity-80 transition-opacity"
+                    className="m3-button-filled text-[10px] uppercase tracking-widest disabled:opacity-50"
                   >
                      {isCapturing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                      Capture
@@ -290,11 +290,11 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
             <div className="flex flex-col gap-3">
                <div className="flex flex-col xl:flex-row xl:items-center gap-4 bg-[var(--md-sys-color-surface-variant)]/30 rounded-3xl p-3 border border-[var(--md-sys-color-outline)]/10">
                    <div className="flex-1 flex items-center gap-2 px-2">
-                      <span className="text-[9px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-widest">Order:</span>
+                      <span className="text-[9px] font-black text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-widest">Order:</span>
                       <select 
                         value={sortBy} 
                         onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-transparent text-[10px] font-black text-[var(--md-sys-color-on-surface)] uppercase outline-none cursor-pointer"
+                        className="m3-input text-[10px] font-black text-[var(--md-sys-color-on-surface)] uppercase py-1 px-3"
                       >
                          <option value="newest" className="bg-[var(--md-sys-color-surface-container)]">Newest</option>
                          <option value="oldest" className="bg-[var(--md-sys-color-surface-container)]">Oldest</option>
@@ -305,7 +305,7 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                    <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
                    <button 
                       onClick={() => setIsGroupingEnabled(!isGroupingEnabled)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all ${isGroupingEnabled ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-outline)] border border-transparent'}`}
+                      className={`m3-button-tonal text-[9px] uppercase tracking-widest ${isGroupingEnabled ? '' : 'opacity-60 grayscale'}`}
                    >
                       {isGroupingEnabled ? <Layers size={14} /> : <History size={14} />}
                       {isGroupingEnabled ? 'Grouped' : 'Flat List'}
@@ -313,7 +313,7 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                    <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
                    <button 
                       onClick={toggleSync}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all ${isSyncEnabled ? 'bg-[var(--md-sys-color-primary)]/20 text-[var(--md-sys-color-primary)] shadow-lg shadow-[var(--md-sys-color-primary)]/10' : 'bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-outline)]'}`}
+                      className={`m3-button-tonal text-[9px] uppercase tracking-widest ${isSyncEnabled ? '' : 'opacity-60 grayscale'}`}
                    >
                       {isSyncEnabled ? <Cloud size={14} /> : <CloudOff size={14} />}
                       {isSyncEnabled ? 'Live Sync' : 'Static'}
@@ -324,15 +324,16 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                         const html = document.documentElement;
                         const isDark = html.dataset.theme === 'dark' || !html.dataset.theme;
                         html.dataset.theme = isDark ? 'light' : 'dark';
+                        localStorage.setItem('theme', isDark ? 'light' : 'dark');
                       }}
-                      className="flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]/60"
+                      className="m3-button-tonal text-[9px] uppercase tracking-widest"
                    >
                      Theme
                    </button>
                    <div className="hidden xl:block w-px h-4 bg-[var(--md-sys-color-outline)]/20" />
                    <button 
                       onClick={fetchCommunityNews}
-                      className="flex items-center gap-2 px-4 py-2 rounded-3xl text-[9px] font-black uppercase tracking-widest transition-all bg-[var(--md-sys-color-surface-variant)]/40 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]/60"
+                      className="m3-button-tonal text-[9px] uppercase tracking-widest"
                    >
                      {communityNews ? communityNews : 'News'}
                    </button>
@@ -343,9 +344,9 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
             <div className="flex items-center justify-between px-3">
                <div className="flex items-center gap-3">
                   <FileCheck size={12} className="text-[var(--md-sys-color-primary)]" />
-                  <span className="text-[9px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-widest text-emerald-400">V9 Kernel Secure</span>
+                  <span className="text-[9px] font-black text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-widest text-emerald-400">V9 Kernel Secure</span>
                </div>
-               <div className="text-[8px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-[0.2em]">{sortedStates.length} Blobs Indexed</div>
+               <div className="text-[8px] font-black text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-[0.2em]">{sortedStates.length} Blobs Indexed</div>
             </div>
          </footer>
       </div>
@@ -372,9 +373,9 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                   >
                      <div className="h-px flex-1 bg-[var(--md-sys-color-outline)]/10 group-hover:bg-[var(--md-sys-color-primary)]/20 transition-colors" />
                      <div className="flex items-center gap-2 px-4 py-1 rounded-3xl bg-[var(--md-sys-color-surface-variant)]/20 border border-[var(--md-sys-color-outline)]/5 transition-all group-hover:border-[var(--md-sys-color-primary)]/30">
-                        {sortBy === 'session' ? <Layers size={10} className="text-[var(--md-sys-color-primary)]" /> : <History size={10} className="text-[var(--md-sys-color-outline)]" />}
+                        {sortBy === 'session' ? <Layers size={10} className="text-[var(--md-sys-color-primary)]" /> : <History size={10} className="text-[var(--md-sys-color-on-surface-variant)]" />}
                         <span className="text-[9px] font-black text-[var(--md-sys-color-on-surface)] uppercase tracking-widest">{date}</span>
-                        <ChevronDown size={10} className={`text-[var(--md-sys-color-outline)] transition-transform ${expandedSessions[date] ? '' : '-rotate-90'}`} />
+                        <ChevronDown size={10} className={`text-[var(--md-sys-color-on-surface-variant)] transition-transform ${expandedSessions[date] ? '' : '-rotate-90'}`} />
                      </div>
                      <div className="h-px flex-1 bg-[var(--md-sys-color-outline)]/10 group-hover:bg-[var(--md-sys-color-primary)]/20 transition-colors" />
                   </button>
@@ -416,11 +417,11 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                                       className="absolute inset-0 z-50 bg-[var(--md-sys-color-error)]/95 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center rounded-3xl" 
                                       onClick={e => e.stopPropagation()}
                                     >
-                                       <AlertTriangle size={24} className="text-white mb-2" />
-                                       <p className="text-[8px] font-black text-white uppercase tracking-widest mb-3">Confirm Purge?</p>
+                                       <AlertTriangle size={24} className="text-m3-on-surface mb-2" />
+                                       <p className="text-[8px] font-black text-m3-on-surface uppercase tracking-widest mb-3">Confirm Purge?</p>
                                        <div className="flex gap-2">
-                                          <button onClick={(e) => executeDelete(e, state.id)} className="bg-white text-[var(--md-sys-color-error)] px-4 py-1.5 rounded-3xl text-[8px] font-black uppercase active:scale-95 leading-none">Yes</button>
-                                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="bg-[var(--md-sys-color-error)]/20 text-white border border-white/20 px-4 py-1.5 rounded-3xl text-[8px] font-black uppercase active:scale-95 leading-none">No</button>
+                                          <button onClick={(e) => executeDelete(e, state.id)} className="m3-button-filled bg-m3-error text-m3-on-error px-4 py-1.5 text-[8px] leading-none">Yes</button>
+                                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="m3-button-tonal px-4 py-1.5 text-[8px] leading-none">No</button>
                                        </div>
                                     </motion.div>
                                   )}
@@ -436,19 +437,19 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
                                   
                                   {/* Multi-select checkbox */}
-                                  <button onClick={(e) => toggleSelect(e, state.id)} className={`absolute top-4 left-4 p-2 backdrop-blur-md rounded-3xl border transition-all ${selectedIds.has(state.id) ? 'bg-[var(--md-sys-color-primary)] border-transparent text-white' : 'bg-black/40 text-[var(--md-sys-color-outline)] border-white/10 hover:bg-black/60'}`}>
+                                  <button onClick={(e) => toggleSelect(e, state.id)} className={`absolute top-4 left-4 p-2 backdrop-blur-md rounded-3xl border transition-all ${selectedIds.has(state.id) ? 'bg-[var(--md-sys-color-primary)] border-transparent text-[var(--md-sys-color-on-primary)]' : 'bg-black/40 text-[var(--md-sys-color-on-surface-variant)] border-m3-outline/20 hover:bg-black/60'}`}>
                                      {selectedIds.has(state.id) ? <CheckSquare size={16} /> : <Square size={16} />}
                                   </button>
 
                                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--md-sys-color-primary)]/10 backdrop-blur-[1px]">
-                                     <PlayCircle size={40} className="text-white drop-shadow-2xl" />
+                                     <PlayCircle size={40} className="text-[var(--md-sys-color-on-primary)] drop-shadow-2xl" />
                                   </div>
 
                                   <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
-                                     <button onClick={(e) => toggleDiff(e, state.id)} className={`p-2 rounded-3xl backdrop-blur-md border border-white/10 transition-all ${diffViewIds?.includes(state.id) ? 'bg-[var(--md-sys-color-primary)] text-white' : 'bg-black/60 text-white hover:bg-[var(--md-sys-color-primary)]'}`}>
+                                     <button onClick={(e) => toggleDiff(e, state.id)} className={`p-2 rounded-3xl backdrop-blur-md border border-m3-outline/20 transition-all ${diffViewIds?.includes(state.id) ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]' : 'bg-black/60 text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]'}`}>
                                         <ScanText size={14} />
                                      </button>
-                                     <button onClick={(e) => handleAudit(e, state.id)} className={`p-2 rounded-3xl backdrop-blur-md border border-white/10 transition-all ${state.auditStatus === 'MATCH' ? 'bg-emerald-500 text-white' : state.auditStatus === 'ORPHAN' ? 'bg-[var(--md-sys-color-error)] text-white' : 'bg-black/40 text-[var(--md-sys-color-outline)]'}`}>
+                                     <button onClick={(e) => handleAudit(e, state.id)} className={`p-2 rounded-3xl backdrop-blur-md border border-m3-outline/20 transition-all ${state.auditStatus === 'MATCH' ? 'bg-emerald-500 text-[var(--md-sys-color-on-primary)]' : state.auditStatus === 'ORPHAN' ? 'bg-[var(--md-sys-color-error)] text-[var(--md-sys-color-on-error)]' : 'bg-black/40 text-[var(--md-sys-color-on-surface-variant)]'}`}>
                                         {state.auditStatus === 'checking' ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                                      </button>
                                   </div>
@@ -458,11 +459,11 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                                    <div className="min-w-0 flex-1 pl-1">
                                       <h4 className="text-[10px] font-black text-[var(--md-sys-color-on-surface)] uppercase truncate">{state.name}</h4>
                                       <div className="flex items-center gap-2 mt-1">
-                                         <Clock size={8} className="text-[var(--md-sys-color-outline)]" />
-                                         <span className="text-[8px] font-black text-[var(--md-sys-color-outline)] uppercase tracking-widest">{new Date(state.timestamp).toLocaleTimeString()}</span>
+                                         <Clock size={8} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                                         <span className="text-[8px] font-black text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-widest">{new Date(state.timestamp).toLocaleTimeString()}</span>
                                       </div>
                                    </div>
-                                   <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(state.id); }} className="p-2 ml-2 text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-error)] transition-colors"><Trash2 size={14} /></button>
+                                   <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(state.id); }} className="p-2 ml-2 text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-error)] transition-colors"><Trash2 size={14} /></button>
                                 </div>
                               </motion.div>
                            ))}
@@ -500,7 +501,7 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                               <img src={state?.previewUrl} className="w-full h-full object-cover grayscale-[0.2] contrast-125 transition-all group-hover:scale-105" />
                               <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/50 backdrop-blur rounded-3xl text-[8px] font-black text-white uppercase">{i === 0 ? 'SNAPSHOT A' : 'SNAPSHOT B'}</div>
                            </div>
-                           <p className="text-[9px] font-black text-[var(--md-sys-color-outline)]/70 uppercase truncate px-2">{state?.name}</p>
+                           <p className="text-[9px] font-black text-[var(--md-sys-color-on-surface-variant)]/70 uppercase truncate px-2">{state?.name}</p>
                         </div>
                      );
                   })}
@@ -537,23 +538,23 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                exit={{ opacity: 0 }}
                className="absolute inset-0 z-[100] bg-[var(--md-sys-color-error)]/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center rounded-3xl"
             >
-               <div className="w-24 h-24 rounded-full bg-[var(--md-sys-color-surface)]/20 flex items-center justify-center mb-6 border border-white/10">
-                  <AlertTriangle size={48} className="text-white animate-bounce" />
+               <div className="w-24 h-24 rounded-full bg-[var(--md-sys-color-surface)]/20 flex items-center justify-center mb-6 border border-m3-outline/20">
+                  <AlertTriangle size={48} className="text-m3-on-surface animate-bounce" />
                </div>
-               <h2 className="text-2xl font-black text-white uppercase tracking-[0.2em] mb-4">Industrial Wipe</h2>
-               <p className="text-white/80 text-xs font-black uppercase tracking-widest mb-8 max-w-sm">
-                  You are about to decommission <span className="text-white">{selectedIds.size}</span> selected restore nodes from the Nexus. This action is irreversible.
+               <h2 className="text-2xl font-black text-m3-on-surface uppercase tracking-[0.2em] mb-4">Industrial Wipe</h2>
+               <p className="text-m3-on-surface-variant text-xs font-black uppercase tracking-widest mb-8 max-w-sm">
+                  You are about to decommission <span className="text-m3-on-surface">{selectedIds.size}</span> selected restore nodes from the Nexus. This action is irreversible.
                </p>
                <div className="flex gap-4">
                   <button 
                      onClick={confirmBatchDelete}
-                     className="bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-error)] px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center gap-3 border border-white/10"
+                     className="m3-button-filled bg-m3-error text-m3-on-error px-10"
                   >
                      <Check size={18} /> Confirm Purge
                   </button>
                   <button 
                      onClick={() => setBatchDeleteConfirm(false)}
-                     className="bg-black/20 border border-white/20 text-white px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                     className="m3-button-tonal px-10"
                   >
                      <X size={18} /> Abort Mission
                   </button>

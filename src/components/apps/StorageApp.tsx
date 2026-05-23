@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HardDrive, Trash2, RefreshCw, FileText, FileCode, AlertCircle, Loader2, Cloud, CloudUpload, ExternalLink, Layers, Box, Cpu, Download } from 'lucide-react';
+import { HardDrive, Trash2, RefreshCw, FileText, FileCode, AlertCircle, Loader2, Cloud, CloudUpload, ExternalLink, Layers, Box, Cpu, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SystemFile {
@@ -95,6 +95,14 @@ export const StorageApp: React.FC = () => {
 
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'type' | 'size' | null, direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
+
+  const handleSort = (key: 'name' | 'type' | 'size') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+    setSortConfig({ key, direction });
+  };
 
   useEffect(() => {
     try {
@@ -119,6 +127,29 @@ export const StorageApp: React.FC = () => {
     (file) => file.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const totalSize = localFiles.reduce((acc, f) => acc + f.size, 0);
+
+  const getFileExtension = (name: string) => name.split('.').pop() || '';
+
+  const sortedFiles = React.useMemo(() => {
+    let sortableFiles = [...currentFiles];
+    if (sortConfig.key !== null) {
+      sortableFiles.sort((a, b) => {
+        if (sortConfig.key === 'name') {
+          return sortConfig.direction === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+        }
+        if (sortConfig.key === 'type') {
+          const typeA = getFileExtension(a.name);
+          const typeB = getFileExtension(b.name);
+          return sortConfig.direction === 'asc' ? typeA.localeCompare(typeB) : typeB.localeCompare(typeA);
+        }
+        if (sortConfig.key === 'size') {
+          return sortConfig.direction === 'asc' ? a.size - b.size : b.size - a.size;
+        }
+        return 0;
+      });
+    }
+    return sortableFiles;
+  }, [currentFiles, sortConfig]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] text-zinc-300 font-mono text-[11px] select-text">
@@ -266,17 +297,36 @@ export const StorageApp: React.FC = () => {
             <table className="w-full text-left">
                <thead className="sticky top-0 bg-zinc-900 text-zinc-500 border-b border-zinc-800 uppercase text-[9px]">
                   <tr>
-                     <th className="px-4 py-2 font-medium">Name</th>
-                     <th className="px-4 py-2 font-medium">Size</th>
+                     <th className="px-4 py-2 font-medium">
+                       <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none">
+                         File Name
+                         {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                       </button>
+                     </th>
+                     <th className="px-4 py-2 font-medium">
+                       <button onClick={() => handleSort('type')} className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none">
+                         Type
+                         {sortConfig.key === 'type' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                       </button>
+                     </th>
+                     <th className="px-4 py-2 font-medium">
+                       <button onClick={() => handleSort('size')} className="flex items-center gap-1 hover:text-white transition-colors focus:outline-none">
+                         Size
+                         {sortConfig.key === 'size' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                       </button>
+                     </th>
                      <th className="px-4 py-2 font-medium">Actions</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-zinc-900">
-                  {currentFiles.map((file) => (
+                  {sortedFiles.map((file) => (
                      <tr key={file.name} className="hover:bg-zinc-800/30 group">
                         <td className="px-4 py-3 flex items-center gap-2">
                            {file.name.endsWith('.tmp') ? <FileCode size={14} className="text-amber-500" /> : <FileText size={14} className="text-zinc-500" />}
                            <span className="truncate max-w-[250px]" title={file.name}>{file.name}</span>
+                        </td>
+                        <td className="px-4 py-3 text-zinc-500 uppercase">
+                           {getFileExtension(file.name) || 'FILE'}
                         </td>
                         <td className="px-4 py-3 text-zinc-500">
                            {(file.size / 1024).toFixed(1)} KB
