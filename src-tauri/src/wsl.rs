@@ -79,14 +79,29 @@ pub async fn launch_game_wsl(emulator_cmd: &str, rom_path: &str, core_path: Opti
 }
 
 /// Dynamic Java multi-version switcher for WSL2 based on game version (ex: Minecraft)
-pub fn switch_java_version(version: &str) -> String {
-    let jdk_path = match version {
+/// Returns full optimized command string with high-performance JVM flags.
+pub fn switch_java_version(version: &str, ram_gb: u32) -> String {
+    let base_jdk = match version {
         "1.16" | "1.8" => "/usr/lib/jvm/java-8-openjdk-amd64/bin/java",
         "1.17" | "1.18" => "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
         "1.21.1" | "1.21" | "latest" => "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
         _ => "/usr/lib/jvm/java-21-openjdk-amd64/bin/java"
     };
     
-    println!("[WSL2] Switched Java to {}", jdk_path);
-    jdk_path.to_string()
+    // INDUSTRIAL TUNING FLAGS (Aika's Style G1GC Optimization)
+    let jvm_flags = format!(
+        "-Xms{ram}G -Xmx{ram}G \
+        -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 \
+        -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch \
+        -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M \
+        -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 \
+        -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 \
+        -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem \
+        -XX:MaxTenuringThreshold=1",
+        ram = ram_gb
+    );
+
+    let full_cmd = format!("{} {}", base_jdk, jvm_flags);
+    println!("[WSL2] Switched Java to V:{} | RAM:{}G | CMD: {}", version, ram_gb, base_jdk);
+    full_cmd
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Cpu, Terminal, ShieldCheck, Download, Settings, RefreshCw, Layers, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Cpu, Terminal, ShieldCheck, Download, Settings, RefreshCw, Layers, CheckCircle2, AlertCircle, Loader2, ChevronLeft } from 'lucide-react';
+import { EmulatorShaderManager } from '../ui/EmulatorShaderManager';
 
 interface Emulator {
   id: string;
@@ -11,9 +12,26 @@ interface Emulator {
   capabilities: string[];
 }
 
-export const EmulatorManager: React.FC = () => {
+interface EmulatorManagerProps {
+  activeShader: string;
+  onShaderChange: (shader: string) => void;
+  showShaderHud: boolean;
+  onToggleHud: () => void;
+  hudOpacity: number;
+  onHudOpacityChange: (opacity: number) => void;
+}
+
+export const EmulatorManager: React.FC<EmulatorManagerProps> = ({ 
+  activeShader, 
+  onShaderChange,
+  showShaderHud,
+  onToggleHud,
+  hudOpacity,
+  onHudOpacityChange
+}) => {
   const [emulators, setEmulators] = useState<Emulator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [configuringEmu, setConfiguringEmu] = useState<string | null>(null);
 
   const scanEmulators = async () => {
     setIsLoading(true);
@@ -66,10 +84,106 @@ export const EmulatorManager: React.FC = () => {
     }
   };
 
+  if (configuringEmu === 'retroarch') {
+    return (
+      <div className="flex flex-col h-full bg-m3-surface rounded-[32px] overflow-hidden border border-m3-outline/10">
+        <div className="bg-m3-surface-variant/30 p-2 flex items-center justify-between border-b border-m3-outline/10">
+           <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setConfiguringEmu(null)}
+                className="p-3 hover:bg-m3-surface-variant rounded-full text-m3-on-surface transition-all"
+              >
+                 <ChevronLeft size={20} />
+              </button>
+              <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant">Global Engine Settings</span>
+           </div>
+        </div>
+
+        {/* M3 Shader HUD Section */}
+        <section className="px-6 py-6 border-b border-m3-outline/10 space-y-6">
+           <div className="flex items-center justify-between">
+              <div>
+                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-m3-primary italic">Shader HUD Architecture</h4>
+                 <p className="text-[9px] font-black text-m3-on-surface-variant uppercase tracking-widest">Real-time Telemetry Visualization</p>
+              </div>
+              <div className="flex items-center gap-3">
+                 <span className="text-[9px] font-black uppercase text-m3-on-surface-variant tracking-widest">{showShaderHud ? 'ENABLED' : 'DISABLED'}</span>
+                 <button 
+                   onClick={onToggleHud}
+                   className={`w-12 h-6 rounded-full relative transition-all duration-300 shadow-inner ${showShaderHud ? 'bg-m3-primary shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)]' : 'bg-m3-outline/20'}`}
+                 >
+                    <motion.div 
+                      layout
+                      initial={false}
+                      animate={{ 
+                        x: showShaderHud ? 26 : 4,
+                        scale: showShaderHud ? 1 : 0.8
+                      }}
+                      className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md z-10"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-between px-2 pointer-events-none opacity-20">
+                       <div className="w-1 h-1 rounded-full bg-white" />
+                       <div className="w-1 h-1 rounded-full bg-white" />
+                    </div>
+                 </button>
+              </div>
+           </div>
+
+           <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                    <Layers size={14} className="text-m3-primary opacity-50" />
+                    <label className="text-[9px] font-black uppercase text-m3-on-surface-variant tracking-widest italic leading-none">Inference Opacity</label>
+                 </div>
+                 <span className="text-[11px] font-mono text-m3-primary font-black bg-m3-primary/10 px-2 py-0.5 rounded italic">
+                    {Math.round(hudOpacity * 100)}%
+                 </span>
+              </div>
+              
+              <div className="relative group px-1 flex items-center h-8">
+                 <div className="absolute left-1 right-1 h-1.5 bg-m3-outline/10 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-m3-primary"
+                      style={{ width: `${hudOpacity * 100}%` }}
+                    />
+                 </div>
+                 <input 
+                   type="range"
+                   min="0.05"
+                   max="1.0"
+                   step="0.01"
+                   value={hudOpacity}
+                   onChange={(e) => onHudOpacityChange(parseFloat(e.target.value))}
+                   className="absolute inset-0 w-full opacity-0 cursor-pointer z-20"
+                 />
+                 <motion.div 
+                    className="absolute w-5 h-5 bg-white rounded-full shadow-m3-elevation-2 border-2 border-m3-primary z-10 pointer-events-none"
+                    animate={{ left: `calc(${hudOpacity * 100}% - 10px)` }}
+                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                 />
+              </div>
+              <div className="flex justify-between px-1">
+                 <span className="text-[7px] font-black text-m3-on-surface-variant/40 uppercase tracking-widest">Minimal</span>
+                 <span className="text-[7px] font-black text-m3-on-surface-variant/40 uppercase tracking-widest">Spectral</span>
+                 <span className="text-[7px] font-black text-m3-on-primary/60 uppercase tracking-widest bg-m3-primary px-2 rounded-full">Absolute</span>
+              </div>
+           </div>
+        </section>
+
+        <div className="flex-1 overflow-hidden">
+           <EmulatorShaderManager 
+             currentShaderId={activeShader} 
+             onShaderChange={onShaderChange}
+           />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-m3-surface-variant/20 backdrop-blur-3xl rounded-[32px] border border-m3-outline/10 overflow-hidden">
       <header className="p-6 border-b border-m3-outline/10 flex items-center justify-between bg-m3-primary/5">
-         <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
                <Cpu size={20} />
             </div>
@@ -120,7 +234,10 @@ export const EmulatorManager: React.FC = () => {
                         </button>
                      )}
                      {emu.status === 'installed' && (
-                        <button className="p-3 text-m3-outline hover:text-white bg-white/5 rounded-xl transition-all">
+                        <button 
+                          onClick={() => setConfiguringEmu(emu.id)}
+                          className="p-3 text-m3-outline hover:text-white bg-white/5 rounded-xl transition-all"
+                        >
                            <Settings size={16} />
                         </button>
                      )}

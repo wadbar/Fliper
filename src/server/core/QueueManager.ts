@@ -25,9 +25,9 @@ export interface DownloadTask {
 export class AdvancedQueueManager {
   private queue: Map<string, DownloadTask> = new Map();
   private activeCount = 0;
-  private readonly MAX_CONCURRENT = 4;
-  private readonly MAX_QUEUE_SIZE = 500;
-  private readonly TTL_MS = 60000;
+  private readonly MAX_CONCURRENT = 8;
+  private readonly MAX_QUEUE_SIZE = 1000;
+  private readonly TTL_MS = 300000; // 5 minutes retention for history
   private sseClients: Set<express.Response> = new Set();
   private gcInterval: NodeJS.Timeout;
   private watchInterval: NodeJS.Timeout | null = null;

@@ -49,11 +49,12 @@ export async function invokeGemini({ prompt, system, temperature, model, apiKey,
         } catch (err) {
             attempt++;
             const errText = err.message || JSON.stringify(err);
-            const isRateLimit = errText.includes('429') || errText.includes('quota') || errText.includes('limit');
+            const isRateLimit = errText.includes('429') || errText.includes('quota') || errText.includes('limit') || errText.includes('resource_exhausted');
             
             if (isRateLimit && attempt < maxAttempts) {
+                // EXTREME V10 BACKOFF: (2^attempt+2 * 1000ms)
                 const backoffMs = Math.pow(2, attempt + 2) * 1000;
-                logger.warn(`[AI-NODE] Gemini 429 detected. Retrying attempt ${attempt}/${maxAttempts} in ${backoffMs}ms...`);
+                logger.warn(`[AI-NODE] Gemini 429/QUOTA detected. Industrial Backoff active. Retrying ${attempt}/${maxAttempts} in ${backoffMs}ms...`);
                 await new Promise(resolve => setTimeout(resolve, backoffMs));
                 continue;
             }
@@ -62,13 +63,13 @@ export async function invokeGemini({ prompt, system, temperature, model, apiKey,
                 const isDailyQuota = /Daily/i.test(errText) || /QuotaExceeded/i.test(errText);
                 const quarantineMs = isDailyQuota ? 3600000 : 60000;
                 
-                quarantineNode('gemini', quarantineMs);
-                logger.warn(`[AI-NODE] Gemini Quarantined due to Rate Limit exhaust after ${attempt} attempts`, { ms: quarantineMs });
-                throw new Error(`GEMINI_NODE_QUARANTINED: ${quarantineMs}ms`);
+                // Formatted for telemetry.mjs +3 PENALTY trigger
+                const failureMsg = `429:RATE_LIMIT_EXHAUSTED:QUARANTINE_MS:${quarantineMs}`;
+                throw new Error(failureMsg);
             }
             
             logger.error(`[AI-NODE] Gemini Fault (Attempt ${attempt})`, { error: errText });
-            throw err;
+            throw new Error(`NODE_FAULT:${errText}`);
         }
     }
 

@@ -2,6 +2,8 @@ import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import compression from "compression";
+import helmet from "helmet";
 import { syncLaunchBoxData, ramDatabase } from "./src/core/bridge";
 import fs from "fs";
 
@@ -38,7 +40,12 @@ async function startServer() {
   HealthMonitor.start();
 
   // --- SECURITY & MIDDLEWARE ---
-  app.use(express.json({ limit: '5mb' }));
+  app.use(helmet({
+    contentSecurityPolicy: false, // Vite handles this in dev or customized per app
+    crossOriginEmbedderPolicy: false
+  }));
+  app.use(compression());
+  app.use(express.json({ limit: '10mb' }));
   app.use(kernelRateLimiter);
   
   // V10: Request Telemetry Pipe
@@ -85,7 +92,18 @@ async function startServer() {
     } else {
       logger.info("[VITE] Serving static production build via Express...");
       const distPath = path.join(process.cwd(), 'dist');
-      app.use(express.static(distPath));
+      
+      // OPTIMIZED STATIC SERVING V9
+      app.use(express.static(distPath, {
+        maxAge: '1y',
+        etag: true,
+        lastModified: true,
+        setHeaders: (res) => {
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      }));
+      
       app.get('*', (req: Request, res: Response) => res.sendFile(path.join(distPath, 'index.html')));
     }
   } catch (viteErr: any) {

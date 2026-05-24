@@ -473,7 +473,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                       className="space-y-6"
                     >
                        <EmulatorShaderManager 
-                         currentShader={selectedShader} 
+                         currentShaderId={selectedShader} 
                          onShaderChange={setSelectedShader} 
                          previewImage={game?.fanArt || game?.coverArt || ''} 
                        />
