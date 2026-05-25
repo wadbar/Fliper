@@ -4,7 +4,7 @@ import { X, Play, Loader2, Maximize2, Settings, Zap, Terminal, Cpu, RotateCcw, C
 import { Game } from '../data/games';
 import { audioEngine } from '../services/audioEngine';
 import { CrtOverlay } from './CrtOverlay';
-import { SaveStatePanel } from './os/SaveStatePanel';
+import { SaveStatePanel, captureCanvasToDataURL } from './os/SaveStatePanel';
 import { EmulatorManager } from './os/EmulatorManager';
 import { SHADER_LIBRARY } from './ui/EmulatorShaderManager';
 
@@ -93,16 +93,21 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
     return () => clearInterval(interval);
   }, []);
 
+  const isCapturingRef = React.useRef(false);
+
   const handleCapture = useCallback(async (previewUrl?: string) => {
-    if (!game) return;
+    if (!game || isCapturingRef.current) return;
+    isCapturingRef.current = true;
     try {
+      const finalPreviewUrl = previewUrl || await captureCanvasToDataURL();
       await fetch('/api/system/files/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId: game.id, type: 'state', previewUrl })
+        body: JSON.stringify({ gameId: game.id, type: 'state', previewUrl: finalPreviewUrl })
       });
       audioEngine.play('click');
     } catch (e) { console.error("Save Error", e); }
+    setTimeout(() => { isCapturingRef.current = false; }, 1000); // 1s cooldown
   }, [game]);
 
   const handleRestore = useCallback(async (stateId: string) => {
@@ -144,8 +149,8 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
        for (const gp of gamepads) {
           if (!gp) continue;
           // L3: 10, R3: 11
-          if (gp.buttons[10].pressed) handleCapture();
-          if (gp.buttons[11].pressed) handleRestore('quick');
+          if (gp.buttons[10].pressed) handleRestore('quick');
+          if (gp.buttons[11].pressed) handleCapture();
        }
     };
 
@@ -243,47 +248,37 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
                   key="active"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`emulator-viewport relative h-full transition-all duration-500 overflow-hidden flex items-center justify-center group bg-zinc-900 shadow-[0_0_100px_rgba(0,0,0,0.8)] rounded-2xl ${isStatesOpen ? 'w-2/3' : 'w-full max-w-6xl aspect-[4/3]'}`}
+                  className={`emulator-viewport relative h-full transition-all duration-500 overflow-hidden flex items-center justify-center group bg-[#0A080C] shadow-m3-elevation-5 rounded-[32px] border border-m3-outline/10 ${isStatesOpen ? 'w-2/3' : 'w-full max-w-6xl aspect-[4/3]'}`}
                 >
                     {/* Shader HUD Overlay */}
                     <AnimatePresence mode="wait">
                       {showShaderHud && (
                         <motion.div 
-                          key={activeShader.id}
-                          initial={{ opacity: 0, x: -30, filter: 'blur(10px)' }}
-                          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                          exit={{ opacity: 0, x: -20, filter: 'blur(5px)' }}
-                          transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+                          key={`hud-${activeShader.id}`}
+                          initial={{ opacity: 0, y: -20, filter: 'blur(8px)' }}
+                          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                          exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
+                          transition={{ type: 'spring', damping: 25, stiffness: 250, duration: 0.4 }}
                           className="absolute top-6 left-6 z-40 pointer-events-none"
                           style={{ opacity: hudOpacity }}
                         >
                            <div 
-                             className="backdrop-blur-xl border border-m3-outline/10 rounded-2xl p-4 flex items-center gap-4 shadow-m3-elevation-3 transition-colors duration-500"
-                             style={{ 
-                               backgroundColor: 'rgba(var(--m3-primary-rgb), 0.1)',
-                               background: 'linear-gradient(135deg, var(--md-sys-color-surface-variant), transparent)',
-                               borderColor: 'var(--md-sys-color-outline)'
-                             }}
+                             className="bg-m3-surface-variant/90 backdrop-blur-3xl border border-m3-outline-variant/40 rounded-[28px] p-5 flex items-center gap-5 shadow-m3-elevation-4 transition-all duration-500"
                            >
                               <div 
-                                className="w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500"
-                                style={{ 
-                                  backgroundColor: 'rgba(var(--m3-primary-rgb), 0.15)',
-                                  color: 'var(--md-sys-color-primary)',
-                                  borderColor: 'rgba(var(--m3-primary-rgb), 0.3)'
-                                }}
+                                className="w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500 bg-m3-primary/10 text-m3-primary border-m3-primary/20 shadow-inner"
                               >
-                                 <Zap size={20} className="animate-pulse" />
+                                 <Zap size={24} className="animate-pulse" />
                               </div>
                               <div className="flex flex-col">
-                                 <span className="text-[9px] font-black uppercase tracking-[0.2em] italic" style={{ color: 'var(--md-sys-color-on-surface-variant)', opacity: 0.6 }}>Active Pipeline</span>
-                                 <span className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--md-sys-color-on-surface)' }}>{activeShader.name}</span>
-                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
-                                      activeShader.complexity === 'High' ? 'bg-m3-error' : 
-                                      activeShader.complexity === 'Med' ? 'bg-orange-400' : 'bg-emerald-400'
+                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] italic text-m3-on-surface-variant/70">Active Pipeline</span>
+                                 <span className="text-base font-black uppercase tracking-tight text-m3-on-surface">{activeShader.name}</span>
+                                 <div className="flex items-center gap-3 mt-1">
+                                    <span className={`w-2 h-2 rounded-full transition-colors duration-500 shadow-sm ${
+                                      activeShader.complexity === 'High' ? 'bg-m3-error shadow-m3-error/50' : 
+                                      activeShader.complexity === 'Med' ? 'bg-orange-400 shadow-orange-400/50' : 'bg-emerald-400 shadow-emerald-400/50'
                                     }`} />
-                                    <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--md-sys-color-on-surface-variant)', opacity: 0.5 }}>{activeShader.complexity} Load Architecture</span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-m3-on-surface-variant/60">{activeShader.complexity} Load Architecture</span>
                                  </div>
                               </div>
                            </div>
@@ -305,16 +300,24 @@ export const EmulatorOverlay: React.FC<EmulatorOverlayProps> = ({ game, onClose 
                     </div>
 
                     {/* UI Controls Overlay */}
-                    <div className="absolute bottom-10 left-10 flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
-                       <button className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-bold hover:bg-black/90 transition-all uppercase tracking-widest">
-                          <Settings size={14} /> Options
-                       </button>
-                       <button 
-                         onClick={() => setIsStatesOpen(!isStatesOpen)}
-                         className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[10px] font-bold transition-all uppercase tracking-widest ${isStatesOpen ? 'bg-m3-primary text-m3-on-primary border-transparent' : 'bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/90'}`}
-                       >
-                          <RotateCcw size={14} /> Snapshots
-                       </button>
+                    <div className="absolute bottom-10 left-10 flex flex-col gap-3 opacity-0 group-hover:opacity-100 transition-all z-50">
+                       <div className="flex gap-4">
+                          <button 
+                             onClick={() => {
+                               setActiveSideTab('emulators');
+                               setIsStatesOpen(true);
+                             }}
+                             className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-bold hover:bg-black/90 transition-all uppercase tracking-widest text-white"
+                          >
+                             <Settings size={14} /> Options
+                          </button>
+                          <button 
+                            onClick={() => setIsStatesOpen(!isStatesOpen)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[10px] font-bold transition-all uppercase tracking-widest ${isStatesOpen ? 'bg-m3-primary text-m3-on-primary border-transparent' : 'bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/90 text-white'}`}
+                          >
+                             <RotateCcw size={14} /> Snapshots
+                          </button>
+                       </div>
                     </div>
                 </motion.div>
 

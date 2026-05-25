@@ -42,23 +42,26 @@ export const OsWindow: React.FC<WindowProps> = ({
         zIndex,
       }}
       onPointerDown={onFocus}
-      className={`flex flex-col bg-m3-surface border shadow-2xl rounded-[28px] overflow-hidden transition-all duration-300 ${isActive ? 'border-m3-outline/30 shadow-m3-primary/10 ring-1 ring-m3-primary/20' : 'border-m3-outline/10'}`}
+      className={`flex flex-col bg-m3-surface-container/95 backdrop-blur-3xl shadow-m3-elevation-4 rounded-[40px] overflow-hidden transition-all duration-500 border ${isActive ? 'border-m3-primary/30 ring-1 ring-m3-primary/10' : 'border-m3-outline/10'}`}
     >
       <div 
         onPointerDown={(e) => dragControls.start(e)}
-        className="window-titlebar flex items-center justify-between px-6 py-4 bg-m3-surface-variant/30 select-none cursor-move border-b border-m3-outline/10"
+        className="window-titlebar flex items-center justify-between px-8 py-5 bg-m3-surface-container-high/40 select-none cursor-move border-b border-m3-outline/5"
       >
-        <div className="flex items-center gap-3 text-m3-on-surface">
-          <div className="w-8 h-8 rounded-full bg-m3-primary/10 flex items-center justify-center">
-            {icon ? React.cloneElement(icon as React.ReactElement<any>, { size: 16, className: 'text-m3-primary' }) : <div className="w-2 h-2 rounded-full bg-m3-primary" />}
+        <div className="flex items-center gap-4 text-m3-on-surface">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${isActive ? 'bg-m3-primary/10 shadow-inner' : 'bg-m3-surface-variant/30'}`}>
+            {icon ? React.cloneElement(icon as React.ReactElement<any>, { size: 18, className: isActive ? 'text-m3-primary' : 'text-m3-outline' }) : <div className="w-2.5 h-2.5 rounded-full bg-m3-primary" />}
           </div>
-          <span className="text-sm font-bold tracking-tight text-white">{title}</span>
+          <div className="flex flex-col">
+             <span className="text-sm font-black tracking-tight text-m3-on-surface uppercase">{title}</span>
+             {isActive && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[8px] font-black text-m3-primary uppercase tracking-[0.2em] italic">Active Process</motion.span>}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="w-8 h-8 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-surface-variant hover:text-white transition-all">
-            <Minus size={16} />
+        <div className="flex items-center gap-2">
+          <button className="w-10 h-10 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-surface-variant hover:text-m3-on-surface transition-all">
+            <Minus size={18} />
           </button>
-          <button className="w-8 h-8 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-surface-variant hover:text-white transition-all">
+          <button className="w-10 h-10 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-surface-variant hover:text-m3-on-surface transition-all">
             <Square size={14} />
           </button>
           <button 
@@ -66,15 +69,15 @@ export const OsWindow: React.FC<WindowProps> = ({
               e.stopPropagation();
               onClose();
             }} 
-            className="w-8 h-8 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-error/20 hover:text-m3-error transition-all"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-m3-outline hover:bg-m3-error/20 hover:text-m3-error transition-all"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
       </div>
       
       {/* Content */}
-      <div className="flex-1 overflow-hidden relative bg-m3-surface/50 backdrop-blur-sm">
+      <div className="flex-1 overflow-hidden relative">
         {children}
       </div>
     </motion.div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Volume2, Sun, Wifi, Bluetooth, Battery, Moon, Zap, ShieldCheck, Cpu } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ControlCenterProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
   brightness,
   onBrightnessChange
 }) => {
+  const { theme, toggleTheme } = useTheme();
   if (!isOpen) return null;
 
   return (
@@ -137,13 +139,9 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
           </div>
           <div className="flex gap-3">
              <button 
-                onClick={() => {
-                   const html = document.documentElement;
-                   const isDark = html.dataset.theme === 'dark' || !html.dataset.theme;
-                   html.dataset.theme = isDark ? 'light' : 'dark';
-                }}
+                onClick={toggleTheme}
                 className="w-10 h-10 rounded-full bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-on-surface)] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]">
-                <Moon size={16} />
+                {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
              </button>
              <button className="w-10 h-10 rounded-full bg-m3-primary text-m3-on-primary flex items-center justify-center shadow-lg shadow-m3-primary/20 transition-all active:scale-95">
                 <Zap size={16} />

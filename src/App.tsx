@@ -9,6 +9,7 @@ import { TaskMonitor } from './components/ui/TaskMonitor';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { useGamepad } from './hooks/useGamepad';
 import { useSystemSettings } from './hooks/useSystemSettings';
+import { useTheme } from './contexts/ThemeContext';
 import { audioEngine } from './services/audioEngine';
 import { EmulatorOverlay } from './components/EmulatorOverlay';
 import { CommandPalette } from './components/ui/CommandPalette';
@@ -23,6 +24,7 @@ export default function App() {
   
   const { user, favorites, stats, loading, login, logout, toggleFavorite, recordLaunch } = useFirebaseSync();
   const { settings, updateSetting } = useSystemSettings();
+  const { theme } = useTheme();
   const [runningGame, setRunningGame] = useState<Game | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -54,13 +56,6 @@ export default function App() {
   useGamepad(handleGamepadAction);
 
   useEffect(() => {
-    // Theme Initializer
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    document.documentElement.dataset.theme = initialTheme;
-    // ---
-    
     const handleGlobalClick = () => {
       audioEngine.play('click');
     };

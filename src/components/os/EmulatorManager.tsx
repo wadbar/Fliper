@@ -42,9 +42,9 @@ export const EmulatorManager: React.FC<EmulatorManagerProps> = ({
       const known = [
         { id: 'retroarch', name: 'RetroArch', defaultVer: '1.16.0', caps: ['Multi-Core', 'Shaders', 'Netplay'] },
         { id: 'pcsx2', name: 'PCSX2', defaultVer: '1.7.0', caps: ['PS2 Hardware Accel', 'High-Res'] },
-        { id: 'dolphin', name: 'Dolphin', defaultVer: '5.0-19342', caps: ['Wii/GC Native', 'UHD Rendering'] },
-        { id: 'ppsspp', name: 'PPSSPP', defaultVer: '1.16.6', caps: ['PSP Pro Rendering'] },
-        { id: 'duckstation', name: 'DuckStation', defaultVer: '0.1-5991', caps: ['PS1 Overclock', 'PGXP'] }
+        { id: 'dolphin', name: 'Dolphin', defaultVer: '5.0-19342', caps: ['WII/GC ENGINE', 'UHD RENDER'] },
+        { id: 'ppsspp', name: 'PPSSPP', defaultVer: '1.16.6', caps: ['PSP PRO CORE'] },
+        { id: 'duckstation', name: 'DuckStation', defaultVer: '0.1-5991', caps: ['PS1 OVERCLOCK'] }
       ];
 
       const scanned: Emulator[] = known.map(k => {
@@ -86,16 +86,19 @@ export const EmulatorManager: React.FC<EmulatorManagerProps> = ({
 
   if (configuringEmu === 'retroarch') {
     return (
-      <div className="flex flex-col h-full bg-m3-surface rounded-[32px] overflow-hidden border border-m3-outline/10">
-        <div className="bg-m3-surface-variant/30 p-2 flex items-center justify-between border-b border-m3-outline/10">
+      <div className="flex flex-col h-full bg-m3-surface-container rounded-[40px] overflow-hidden border border-m3-outline/10 shadow-m3-elevation-3">
+        <div className="bg-m3-surface-container-high/60 backdrop-blur-md p-3 flex items-center justify-between border-b border-m3-outline/10">
            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setConfiguringEmu(null)}
-                className="p-3 hover:bg-m3-surface-variant rounded-full text-m3-on-surface transition-all"
+                className="w-12 h-12 hover:bg-m3-surface-variant flex items-center justify-center rounded-full text-m3-on-surface transition-all"
               >
-                 <ChevronLeft size={20} />
+                 <ChevronLeft size={22} />
               </button>
-              <span className="text-[10px] font-black uppercase tracking-widest text-m3-on-surface-variant">Global Engine Settings</span>
+              <div>
+                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-m3-primary italic leading-none">Global Matrix</span>
+                 <p className="text-[9px] font-bold text-m3-on-surface-variant uppercase tracking-widest leading-none">Core Pipeline Settings</p>
+              </div>
            </div>
         </div>
 
@@ -181,97 +184,97 @@ export const EmulatorManager: React.FC<EmulatorManagerProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-m3-surface-variant/20 backdrop-blur-3xl rounded-[32px] border border-m3-outline/10 overflow-hidden">
-      <header className="p-6 border-b border-m3-outline/10 flex items-center justify-between bg-m3-primary/5">
-        <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
-               <Cpu size={20} />
+    <div className="flex flex-col h-full bg-m3-surface-container-low backdrop-blur-3xl rounded-[40px] border border-m3-outline/10 overflow-hidden shadow-m3-elevation-2">
+      <header className="p-8 border-b border-m3-outline/10 flex items-center justify-between bg-m3-primary/5">
+        <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-m3-primary/10 text-m3-primary rounded-[22px] flex items-center justify-center border border-m3-primary/20 shadow-inner group">
+               <Cpu size={26} className="group-hover:scale-110 transition-transform" />
             </div>
             <div>
-               <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Core Engines</h3>
-               <p className="text-[10px] font-black text-m3-outline uppercase tracking-widest italic">Consolidated Configuration Library</p>
+               <h3 className="text-xl font-display font-bold text-m3-on-surface tracking-tight">Core Engines</h3>
+               <p className="text-[10px] font-black text-m3-primary uppercase tracking-[0.3em] italic">V9 Industrial Infrastructure</p>
             </div>
          </div>
          <button 
            onClick={scanEmulators}
            disabled={isLoading}
-           className="p-3 text-m3-outline hover:text-white hover:bg-white/10 rounded-full transition-all"
+           className="w-12 h-12 flex items-center justify-center text-m3-outline hover:text-m3-primary hover:bg-m3-primary/10 rounded-full transition-all border border-transparent hover:border-m3-primary/20 disabled:opacity-50"
          >
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={22} className={isLoading ? 'animate-spin' : ''} />
          </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
          {emulators.map((emu) => (
             <motion.div 
                key={emu.id}
-               initial={{ opacity: 0, x: -20 }}
-               animate={{ opacity: 1, x: 0 }}
-               className="group relative rounded-[24px] bg-m3-surface/40 border border-m3-outline/10 p-5 hover:border-m3-primary/50 transition-all cursor-default"
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="group relative rounded-[32px] bg-m3-surface-container-high border border-m3-outline/10 p-6 hover:border-m3-primary/40 transition-all duration-300 shadow-sm hover:shadow-m3-elevation-2 cursor-pointer"
             >
-               <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${emu.status === 'installed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-m3-outline/10 text-m3-outline'}`}>
-                        {emu.status === 'installed' ? <CheckCircle2 size={24} /> : <Terminal size={24} />}
+               <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-5">
+                     <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center transition-all ${emu.status === 'installed' ? 'bg-m3-primary/10 text-m3-primary' : 'bg-m3-outline/10 text-m3-outline'}`}>
+                        {emu.status === 'installed' ? <CheckCircle2 size={32} /> : <Terminal size={32} />}
                      </div>
                      <div>
-                        <h4 className="text-sm font-black text-white uppercase tracking-tighter">{emu.name}</h4>
-                        <div className="flex items-center gap-2">
-                           <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${emu.status === 'installed' ? 'bg-emerald-500/20 text-emerald-400' : emu.status === 'configuring' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-m3-error/20 text-m3-error'}`}>
+                        <h4 className="text-lg font-black text-m3-on-surface uppercase tracking-tighter leading-none mb-1">{emu.name}</h4>
+                        <div className="flex items-center gap-3">
+                           <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${emu.status === 'installed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : emu.status === 'configuring' ? 'bg-m3-primary/10 text-m3-primary border border-m3-primary/30' : 'bg-m3-error/10 text-m3-error border border-m3-error/20'}`}>
                               {emu.status}
                            </span>
-                           <span className="text-[9px] font-black text-m3-outline/60 uppercase">v{emu.version}</span>
+                           <span className="text-[10px] font-black text-m3-on-surface-variant/40 uppercase tracking-widest whitespace-nowrap">Engine v{emu.version}</span>
                         </div>
                      </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                      {emu.status === 'missing' && (
                         <button 
-                          onClick={() => handleBootstrap(emu.id)}
-                          className="m3-button-filled px-4 py-2 text-[10px] gap-2"
+                          onClick={(e) => { e.stopPropagation(); handleBootstrap(emu.id); }}
+                          className="m3-button-filled h-12 px-6 text-[10px] uppercase tracking-[0.2em] font-black gap-2 shadow-m3-elevation-2"
                         >
-                           <Download size={14} /> Bootstrap
+                           <Download size={18} /> INSTALL CORE
                         </button>
                      )}
                      {emu.status === 'installed' && (
                         <button 
-                          onClick={() => setConfiguringEmu(emu.id)}
-                          className="p-3 text-m3-outline hover:text-white bg-white/5 rounded-xl transition-all"
+                          onClick={(e) => { e.stopPropagation(); setConfiguringEmu(emu.id); }}
+                          className="w-12 h-12 flex items-center justify-center text-m3-outline hover:text-m3-primary bg-m3-surface-variant/20 rounded-[18px] transition-all border border-m3-outline/10 hover:border-m3-primary/30"
                         >
-                           <Settings size={16} />
+                           <Settings size={20} />
                         </button>
                      )}
                      {emu.status === 'configuring' && (
-                        <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl animate-pulse">
-                           <Loader2 size={16} className="animate-spin" />
+                        <div className="w-12 h-12 flex items-center justify-center bg-m3-primary/10 text-m3-primary rounded-[18px] animate-pulse">
+                           <Loader2 size={20} className="animate-spin" />
                         </div>
                      )}
                   </div>
                </div>
 
-               <div className="grid grid-cols-3 gap-2">
+               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {emu.capabilities.map((cap, i) => (
-                     <div key={i} className="px-2 py-1 bg-black/20 rounded-lg border border-white/5 text-[8px] font-black text-m3-outline uppercase text-center truncate">
+                     <div key={i} className="px-3 py-2 bg-m3-surface-container/50 rounded-xl border border-m3-outline/5 text-[9px] font-black text-m3-on-surface-variant uppercase text-center tracking-widest truncate">
                         {cap}
                      </div>
                   ))}
                </div>
 
                {emu.status === 'installed' && (
-                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                  <div className="mt-6 pt-5 border-t border-m3-outline/10 flex items-center justify-between">
                      <div className="flex items-center gap-2">
-                        <ShieldCheck size={12} className="text-emerald-400" />
-                        <span className="text-[9px] font-black text-emerald-400/60 uppercase tracking-widest">Signed & Verified</span>
+                        <ShieldCheck size={14} className="text-emerald-400" />
+                        <span className="text-[9px] font-black text-emerald-400 opacity-60 uppercase tracking-[0.2em] italic">Native Isolation Verified</span>
                      </div>
-                     <span className="text-[8px] font-black text-m3-outline uppercase">/database/emulators/{emu.id}</span>
+                     <span className="text-[9px] font-mono text-m3-outline uppercase tracking-widest bg-m3-surface-variant/20 px-2 py-0.5 rounded italic">fliper://core/{emu.id}</span>
                   </div>
                )}
             </motion.div>
          ))}
       </div>
 
-      <footer className="p-4 bg-m3-surface-variant/30 border-t border-m3-outline/10 text-center">
-         <p className="text-[8px] font-black text-m3-outline uppercase tracking-[0.3em]">Neural Core Engine v9.4.0</p>
+      <footer className="p-6 bg-m3-surface-container-high border-t border-m3-outline/10 text-center">
+         <p className="text-[9px] font-black text-m3-on-surface-variant/40 uppercase tracking-[0.4em] italic">Neural Core Engine Infrastructure v9.4.0</p>
       </footer>
     </div>
   );

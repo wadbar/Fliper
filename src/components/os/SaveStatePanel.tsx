@@ -1,6 +1,32 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Save, Trash2, RotateCcw, Image as ImageIcon, Clock, FileCheck, Loader2, PlayCircle, Plus, ChevronDown, AlertTriangle, Check, X, ShieldCheck, ShieldAlert, History, Square, CheckSquare, Layers, Cloud, CloudOff, ScanText, Sparkles } from 'lucide-react';
+import html2canvas from 'html2canvas';
+
+const ThumbnailImage = ({ src, alt, isRefreshing, originalImageClass }: { src?: string, alt: string, isRefreshing: boolean, originalImageClass: string }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  return (
+    <>
+       {!isLoaded && (
+         <div className="absolute inset-0 bg-[var(--md-sys-color-surface-variant)] animate-pulse flex items-center justify-center">
+            <Loader2 size={24} className="text-[var(--md-sys-color-outline)] animate-spin" />
+         </div>
+       )}
+       <motion.img 
+         src={src} 
+         alt={alt} 
+         onLoad={() => setIsLoaded(true)}
+         onError={(e) => {
+           setIsLoaded(true);
+           e.currentTarget.src = 'https://picsum.photos/seed/fallback/400/225';
+         }}
+         animate={{ filter: isRefreshing || !isLoaded ? 'blur(10px) brightness(0.7)' : 'blur(0px) brightness(1)' }}
+         className={`${originalImageClass} ${isLoaded ? 'opacity-100' : 'opacity-0'}`} 
+       />
+    </>
+  );
+};
 
 interface SaveState {
   id: string;
@@ -22,13 +48,23 @@ interface SaveStatePanelProps {
 
 type SortOption = 'newest' | 'oldest' | 'alphabetical' | 'session';
 
-const captureCanvasToDataURL = (): string | undefined => {
+export const captureCanvasToDataURL = async (): Promise<string | undefined> => {
   try {
+    const viewport = document.querySelector('.emulator-viewport') as HTMLElement;
+    if (viewport) {
+      const canvas = await html2canvas(viewport, { 
+        useCORS: true, 
+        logging: false,
+        backgroundColor: '#000000'
+      });
+      return canvas.toDataURL('image/jpeg', 0.8);
+    }
+    
+    // Fallback logic
     const canvas = document.querySelector('canvas');
     if (canvas) {
       return canvas.toDataURL('image/jpeg', 0.7);
     }
-    // Fallback for mockup: find the main emulator preview image
     const mockupImg = document.querySelector('img[alt="emulator-viewport"]') as HTMLImageElement || document.querySelector('.emulator-layer img') as HTMLImageElement;
     if (mockupImg) {
       const tempCanvas = document.createElement('canvas');
@@ -197,15 +233,23 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
     }
   };
 
-  const handleCapture = async () => {
+  const isCapturingRef = React.useRef(isCapturing);
+  useEffect(() => {
+    isCapturingRef.current = isCapturing;
+  }, [isCapturing]);
+
+  const handleCapture = useCallback(async () => {
+    if (isCapturingRef.current) return;
     setIsCapturing(true);
-    const preview = captureCanvasToDataURL();
+    const preview = await captureCanvasToDataURL();
     await onCapture(preview);
     setTimeout(() => {
       setIsCapturing(false);
       fetchStates();
     }, 1500);
-  };
+  }, [onCapture, fetchStates]);
+
+
 
   const toggleSelect = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -428,11 +472,11 @@ export const SaveStatePanel: React.FC<SaveStatePanelProps> = ({ gameId, onRestor
                                 </AnimatePresence>
 
                                 <div className="aspect-video relative overflow-hidden">
-                                  <motion.img 
+                                  <ThumbnailImage 
                                     src={state.previewUrl} 
                                     alt={state.name} 
-                                    animate={{ filter: isRefreshing ? 'blur(10px) brightness(0.7)' : 'blur(0px) brightness(1)' }}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 ease-out" 
+                                    isRefreshing={isRefreshing}
+                                    originalImageClass="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 ease-out"
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
                                   

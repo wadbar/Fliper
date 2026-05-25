@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { KernelProvider } from './contexts/KernelContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 interface Props {
   children?: ReactNode;
@@ -73,7 +74,9 @@ function KioskShell() {
   return (
     <KernelProvider>
       <LanguageProvider>
-        <App />
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
       </LanguageProvider>
     </KernelProvider>
   );
